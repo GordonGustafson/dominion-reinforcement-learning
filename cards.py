@@ -1,6 +1,6 @@
 import pandas as pd
 
-from typing import NamedTuple, List, Set, Union
+from typing import NamedTuple, Tuple, List
 
 
 CardCounts = List[int]
@@ -20,6 +20,11 @@ GameState = NamedTuple("GameState", [
     # opponent card counts?
 ])
 
+Action = NamedTuple("Action", [
+    ("game_state", GameState),
+    ("description", str),
+])
+
 CARD_DEFS = pd.DataFrame(columns=["cost", "victory_points", "money_produced", "name"], data=[
     [0, 0, 1, "copper"],
     [3, 0, 2, "silver"],
@@ -35,7 +40,7 @@ def treasure_total(card_counts: CardCounts) -> int:
 def vp_total(card_counts: CardCounts) -> int:
     return CARD_DEFS.victory_points.dot(card_counts)
 
-# TODO: use numpy for CardCounts?
+# TODO: use numpy array for CardCounts?
 def add_card(card_counts: CardCounts, card_index: int) -> CardCounts:
     card_counts_copy = card_counts[:]
     card_counts_copy[card_index] += 1
@@ -46,20 +51,22 @@ def add_card_by_name(card_counts: CardCounts, card_name: str) -> CardCounts:
     return add_card(card_counts, card_index)
 
 # TODO: make this return a set? Will need to stop using List in GameState
-def buy_phase_options(buy_game_state: GameState) -> Set[GameState]:
+def buy_phase_options(buy_game_state: GameState) -> List[Action]:
     total_money_for_turn = treasure_total(buy_game_state.hand)
 
     # TODO: only allow buying from non-empty buy piles
     buyable_card_indices = CARD_DEFS.index[CARD_DEFS['cost'] <= total_money_for_turn].to_list()
 
     cleanup_game_state = buy_game_state._replace(cleanup_phase=True)
-    # buy nothing case
-    results = [cleanup_game_state]
+    buy_nothing = Action(game_state=cleanup_game_state, description="buy nothing")
+    actions = [buy_nothing]
     for buyable_card_index in buyable_card_indices:
-        results.append(cleanup_game_state._replace(
-            discard_pile=add_card(buy_game_state.discard_pile, buyable_card_index)))
+        game_state = cleanup_game_state._replace(
+            discard_pile=add_card(buy_game_state.discard_pile, buyable_card_index))
+        card_name = CARD_DEFS["name"][buyable_card_index]
+        actions.append(Action(game_state, f"buy {card_name}"))
 
-    return results
+    return actions
 
 def game_state_to_features(game_state: GameState):
     pass
