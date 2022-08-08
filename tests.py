@@ -6,6 +6,10 @@ import unittest
 def dict_to_card_counts(card_names_dict):
     return np.array([card_names_dict.get(card_name, 0) for card_name in CARD_DEFS['name'].to_list()])
 
+def add_card_by_name(card_counts: CardCounts, card_name: str) -> CardCounts:
+    card_index = CARD_DEFS.index[CARD_DEFS['name'] == card_name].item()
+    return add_card(card_counts, card_index)
+
 
 class TestCards(unittest.TestCase):
     def test_treasure_total(self):

@@ -49,10 +49,6 @@ def add_card(card_counts: CardCounts, card_index: int) -> CardCounts:
     card_counts_copy[card_index] += 1
     return card_counts_copy
 
-def add_card_by_name(card_counts: CardCounts, card_name: str) -> CardCounts:
-    card_index = CARD_DEFS.index[CARD_DEFS['name'] == card_name].item()
-    return add_card(card_counts, card_index)
-
 # TODO: make this return a set? Will need to stop using List in GameState
 def buy_phase_options(buy_game_state: GameState) -> List[Action]:
     total_money_for_turn = treasure_total(buy_game_state.hand)
