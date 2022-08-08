@@ -72,15 +72,3 @@ def game_state_to_features(game_state: GameState):
     pass
     # total_victory_points =
     # total_money_for_turn =
-
-def dict_to_card_counts(card_names_dict):
-    return [card_names_dict.get(card_name, 0) for card_name in CARD_DEFS['name'].to_list()]
-
-
-# Improvements for later:
-# - make card counts available to ML agent
-# - make buy pile counts available to ML agent
-
-# lookup
-# query
-# c.index[c['name'] == 'silver'].item()
