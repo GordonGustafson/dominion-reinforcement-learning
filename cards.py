@@ -1,9 +1,10 @@
+import numpy as np
 import pandas as pd
 
 from typing import NamedTuple, Tuple, List
 
 
-CardCounts = List[int]
+CardCounts = np.ndarray
 
 GameState = NamedTuple("GameState", [
     ("cleanup_phase", bool),
@@ -40,9 +41,11 @@ def treasure_total(card_counts: CardCounts) -> int:
 def vp_total(card_counts: CardCounts) -> int:
     return CARD_DEFS.victory_points.dot(card_counts)
 
-# TODO: use numpy array for CardCounts?
+def empty_card_counts():
+    return np.zeros(shape=(CARD_DEFS.shape[0],), dtype=np.int32)
+
 def add_card(card_counts: CardCounts, card_index: int) -> CardCounts:
-    card_counts_copy = card_counts[:]
+    card_counts_copy = card_counts.copy()
     card_counts_copy[card_index] += 1
     return card_counts_copy
 

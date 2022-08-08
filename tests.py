@@ -4,7 +4,7 @@ import unittest
 
 
 def dict_to_card_counts(card_names_dict):
-    return [card_names_dict.get(card_name, 0) for card_name in CARD_DEFS['name'].to_list()]
+    return np.array([card_names_dict.get(card_name, 0) for card_name in CARD_DEFS['name'].to_list()])
 
 
 class TestCards(unittest.TestCase):
