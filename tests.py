@@ -10,6 +10,14 @@ def add_card_by_name(card_counts: CardCounts, card_name: str) -> CardCounts:
     card_index = CARD_DEFS.index[CARD_DEFS['name'] == card_name].item()
     return add_card(card_counts, card_index)
 
+def card_counts_equal(lhs: CardCounts, rhs: CardCounts) -> bool:
+    return np.array_equal(lhs, rhs)
+
+def game_states_equal(lhs: GameState, rhs: GameState) -> bool:
+    return (lhs.cleanup_phase == rhs.cleanup_phase
+            and card_counts_equal(lhs.hand, rhs.hand)
+            and card_counts_equal(lhs.deck, rhs.deck)
+            and card_counts_equal(lhs.discard_pile, rhs.discard_pile))
 
 class TestCards(unittest.TestCase):
     def test_treasure_total(self):
@@ -52,6 +60,38 @@ class TestCards(unittest.TestCase):
             Action(cleanup_game_state._replace(discard_pile=add_card_by_name(discard_pile, "duchy")), "buy duchy"),
         ]
         self.assertTrue(buy_phase_options(buy_game_state) == expected_options)
+
+    def test_draw_card(self):
+        game_state = GameState(cleanup_phase=False,
+                               hand=dict_to_card_counts({"silver": 1}),
+                               deck=dict_to_card_counts({"copper": 1, "gold": 1}),
+                               discard_pile=dict_to_card_counts({"estate": 1}))
+
+        possibilities_after_one_draw = [GameState(cleanup_phase=False,
+                                                  hand=dict_to_card_counts({"copper": 1, "silver": 1}),
+                                                  deck=dict_to_card_counts({"gold": 1}),
+                                                  discard_pile=dict_to_card_counts({"estate": 1})),
+                                        GameState(cleanup_phase=False,
+                                                  hand=dict_to_card_counts({"gold": 1, "silver": 1}),
+                                                  deck=dict_to_card_counts({"copper": 1}),
+                                                  discard_pile=dict_to_card_counts({"estate": 1}))]
+
+        exp_after_two_draws = GameState(cleanup_phase=False,
+                                              hand=dict_to_card_counts({"silver": 1, "gold": 1, "copper": 1}),
+                                              deck=dict_to_card_counts({}),
+                                              discard_pile=dict_to_card_counts({"estate": 1}))
+
+        exp_after_three_draws = GameState(cleanup_phase=False,
+                                               hand=dict_to_card_counts({"silver": 1, "gold": 1, "copper": 1, "estate": 1}),
+                                               deck=dict_to_card_counts({}),
+                                               discard_pile=dict_to_card_counts({}))
+
+
+        self.assertTrue(draw_card(game_state) in possibilities_after_one_draw)
+        self.assertTrue(draw_card(draw_card(game_state)) == exp_after_two_draws)
+        # No change when deck and discard pile are both empty
+        self.assertTrue(draw_card(draw_card(draw_card(game_state))) == exp_after_three_draws)
+        self.assertTrue(draw_card(draw_card(draw_card(draw_card(game_state)))) == exp_after_three_draws)
 
 
 if __name__ == '__main__':
