@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from typing import NamedTuple, Tuple, List
+from typing import NamedTuple, Tuple, List, Dict
 
 
 CardCounts = np.ndarray
@@ -75,12 +75,16 @@ def card_name_to_index(card_name: str) -> int:
     return CARD_DEFS.index[CARD_DEFS['name'] == card_name].item()
 
 def num_copies_of_card(card_counts: CardCounts, card_name: str) -> int:
-    card_index = card_name_to_index(card_index)
+    card_index = card_name_to_index(card_name)
     return card_counts[card_index]
 
-def dict_to_card_counts(card_names_dict):
+def dict_to_card_counts(card_names_dict: Dict[str, int]) -> CardCounts:
     return np.array([card_names_dict.get(card_name, 0) for card_name in CARD_DEFS['name'].to_list()])
 
+def card_counts_to_dict(card_counts: CardCounts) -> Dict[str, int]:
+    return {card_name: num_copies_of_card(card_counts, card_name)
+            for card_name in CARD_DEFS['name'].to_list()
+            if num_copies_of_card(card_counts, card_name) > 0}
 
 
 def treasure_total(card_counts: CardCounts) -> int:
@@ -164,7 +168,30 @@ def initial_game_state() -> GameState:
 
     return game_state
 
-def game_state_to_features(game_state: GameState):
-    pass
-    # total_victory_points =
-    # total_money_for_turn =
+def is_last_turn(game_state: GameState) -> bool:
+    # hack until we add supply piles
+    num_provinces = (num_copies_of_card(game_state.hand, "province")
+                     + num_copies_of_card(game_state.deck, "province")
+                     + num_copies_of_card(game_state.discard_pile, "province"))
+    return num_provinces >= 4
+
+def game_flow(option_chooser):
+    game_state = initial_game_state()
+
+    while not is_last_turn(game_state):
+        possible_actions = buy_phase_options(game_state)
+
+        selected_action_index = option_chooser(game_state, possible_actions)
+        selected_action = possible_actions[selected_action_index]
+        game_state = selected_action.game_state
+        print(selected_action.description)
+
+        game_state = do_cleanup_phase_if_set(game_state)
+
+
+def user_option_chooser(game_state: GameState, actions: List[Action]) -> int:
+    print(f"hand: {card_counts_to_dict(game_state.hand)}")
+    for i, action in enumerate(actions):
+        print(f"{i}: {action.description}")
+
+    return int(input())
