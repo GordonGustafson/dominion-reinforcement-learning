@@ -6,31 +6,48 @@ from typing import NamedTuple, Tuple, List, Dict
 
 CardCounts = np.ndarray
 
-_GameStateBase = NamedTuple("GameState", [
-    ("cleanup_phase", bool),
+_PlayerBase = NamedTuple("Player", [
     ("hand", CardCounts),
     ("deck", CardCounts),
     ("discard_pile", CardCounts),
-
-    # ("buy_piles", CardCounts),
-
-    # For later:
-    # actions
-    # buys
-    # num cards in opponents hand: Militia, Council Room
-    # opponent card counts?
 ])
 
-class GameState(_GameStateBase):
+class Player(_PlayerBase):
     def __eq__(self, other):
         # The default implementation uses ==, which doesn't work for numpy arrays
-        return (self.cleanup_phase == other.cleanup_phase
-                and card_counts_equal(self.hand, other.hand)
+        return (card_counts_equal(self.hand, other.hand)
                 and card_counts_equal(self.deck, other.deck)
                 and card_counts_equal(self.discard_pile, other.discard_pile))
 
     def __ne__(self, other):
         return not (self == other)
+
+_GameStateBase = NamedTuple("GameState", [
+    ("players", List[Player]),
+    ("current_player_index", int),
+    ("cleanup_phase", bool),
+])
+
+class GameState(_GameStateBase):
+    def __eq__(self, other):
+        # The default implementation uses ==, which doesn't work for numpy arrays
+        return (self.players == other.players
+                and self.current_player_index == other.current_player_index
+                and self.cleanup_phase == other.cleanup_phase)
+
+    def __ne__(self, other):
+        return not (self == other)
+
+    def current_player(self) -> Player:
+        return self.players[self.current_player_index]
+
+    def replace_current_player(self, player):
+        players_copy = self.players[:]
+        players_copy[self.current_player_index] = player
+        return self._replace(players=players_copy)
+
+    def replace_current_player_kwargs(self, **kwargs):
+        return self.replace_current_player(self.current_player()._replace(**kwargs))
 
 Action = NamedTuple("Action", [
     ("game_state", GameState),
@@ -97,9 +114,13 @@ def add_card_counts(card_counts_lhs: CardCounts, card_counts_rhs: CardCounts) ->
     return card_counts_lhs + card_counts_rhs
 
 
+def total_player_vp(player: Player) -> int:
+    return vp_total(player.hand) + vp_total(player.deck) + vp_total(player.discard_pile)
+
 # TODO: make this return a set? Will need to stop using List in GameState
 def buy_phase_options(buy_game_state: GameState) -> List[Action]:
-    total_money_for_turn = treasure_total(buy_game_state.hand)
+    player = buy_game_state.current_player()
+    total_money_for_turn = treasure_total(player.hand)
 
     # TODO: only allow buying from non-empty buy piles
     buyable_card_indices = CARD_DEFS.index[CARD_DEFS['cost'] <= total_money_for_turn].to_list()
@@ -108,46 +129,67 @@ def buy_phase_options(buy_game_state: GameState) -> List[Action]:
     buy_nothing = Action(game_state=cleanup_game_state, description="buy nothing")
     actions = [buy_nothing]
     for buyable_card_index in buyable_card_indices:
-        game_state = cleanup_game_state._replace(
-            discard_pile=add_card(buy_game_state.discard_pile, buyable_card_index))
+        game_state = cleanup_game_state.replace_current_player_kwargs(
+            discard_pile=add_card(player.discard_pile, buyable_card_index))
+
         card_name = CARD_DEFS["name"][buyable_card_index]
         actions.append(Action(game_state, f"buy {card_name}"))
 
     return actions
 
-def draw_card(game_state: GameState):
-    if num_cards(game_state.deck) == 0 and num_cards(game_state.discard_pile) == 0:
-        return game_state
+def draw_card(player: Player) -> Player:
+    if num_cards(player.deck) == 0 and num_cards(player.discard_pile) == 0:
+        return player
 
-    if num_cards(game_state.deck) == 0:
-        game_state = game_state._replace(deck=game_state.discard_pile,
-                                         discard_pile=empty_card_counts())
+    if num_cards(player.deck) == 0:
+        player = player._replace(deck=player.discard_pile,
+                                 discard_pile=empty_card_counts())
 
-    deck = game_state.deck
+    deck = player.deck
     card_drawn = np.random.choice(a=NUM_CARDS_DEFINED, size=1, replace=False, p=deck/num_cards(deck))
-    game_state = game_state._replace(hand=add_card(game_state.hand, card_drawn),
-                                    deck=remove_card(game_state.deck, card_drawn))
+    player = player._replace(hand=add_card(player.hand, card_drawn),
+                             deck=remove_card(deck, card_drawn))
 
-    return game_state
+    return player
 
 def do_cleanup_phase_if_set(game_state: GameState) -> GameState:
     if not game_state.cleanup_phase:
         return game_state
 
     # Discard your hand
-    game_state = game_state._replace(
-        cleanup_phase=False,
+    game_state = game_state._replace(cleanup_phase=False)
+    game_state = game_state.replace_current_player_kwargs(
         hand=empty_card_counts(),
-        discard_pile=add_card_counts(game_state.hand, game_state.discard_pile),
+        discard_pile=add_card_counts(game_state.current_player().hand,
+                                     game_state.current_player().discard_pile),
     )
 
     # draw 5 cards
+    player = game_state.current_player()
     for _ in range(5):
-        game_state = draw_card(game_state)
+        player = draw_card(player)
+    game_state = game_state.replace_current_player(player)
+
+    # Move to next player
+    index = game_state.current_player_index + 1
+    num_players = len(game_state.players)
+    if index >= num_players:
+        index = index % num_players
+    game_state = game_state._replace(current_player_index=index)
 
     return game_state
 
-def initial_game_state() -> GameState:
+def initial_player_state() -> Player:
+    player = Player(hand=dict_to_card_counts({}),
+                    deck=dict_to_card_counts({"estate": 3, "copper": 7}),
+                    discard_pile=dict_to_card_counts({}))
+
+    for _ in range(5):
+        player = draw_card(player)
+
+    return player
+
+def initial_game_state(num_players: int) -> GameState:
     # TODO: account for copper and estates being taken into starting hands
     # return dict_to_card_counts({
     #     "copper": 60,
@@ -157,40 +199,39 @@ def initial_game_state() -> GameState:
     #     "duchy": 12,
     #     "province": 8,
     # })
+    return GameState(players=[initial_player_state() for _ in range(num_players)],
+                     current_player_index=0,
+                     cleanup_phase=False)
 
-    game_state = GameState(cleanup_phase=False,
-                           hand=dict_to_card_counts({}),
-                           deck=dict_to_card_counts({"estate": 3, "copper": 7}),
-                           discard_pile=dict_to_card_counts({}))
+def num_provinces(player: Player) -> int:
+    return (num_copies_of_card(player.hand, "province")
+            + num_copies_of_card(player.deck, "province")
+            + num_copies_of_card(player.discard_pile, "province"))
 
-    for _ in range(5):
-        game_state = draw_card(game_state)
-
-    return game_state
-
-def is_last_turn(game_state: GameState) -> bool:
+def game_completed(game_state: GameState) -> bool:
     # hack until we add supply piles
-    num_provinces = (num_copies_of_card(game_state.hand, "province")
-                     + num_copies_of_card(game_state.deck, "province")
-                     + num_copies_of_card(game_state.discard_pile, "province"))
-    return num_provinces >= 4
+    print(sum(num_provinces(player) for player in game_state.players))
+    return sum(num_provinces(player) for player in game_state.players) >= 2
 
-def game_flow(option_chooser):
-    game_state = initial_game_state()
+def game_flow(num_players: int, option_choosers: List):
+    game_state = initial_game_state(num_players)
 
-    while not is_last_turn(game_state):
+    while not game_completed(game_state):
         possible_actions = buy_phase_options(game_state)
 
-        selected_action_index = option_chooser(game_state, possible_actions)
+        selected_action_index = option_choosers[game_state.current_player_index](game_state, possible_actions)
         selected_action = possible_actions[selected_action_index]
         game_state = selected_action.game_state
         print(selected_action.description)
 
         game_state = do_cleanup_phase_if_set(game_state)
 
+    for i, player in enumerate(game_state.players):
+        print(f"player {i} score: {total_player_vp(player)}")
+
 
 def user_option_chooser(game_state: GameState, actions: List[Action]) -> int:
-    print(f"hand: {card_counts_to_dict(game_state.hand)}")
+    print(f"hand: {card_counts_to_dict(game_state.current_player().hand)}")
     for i, action in enumerate(actions):
         print(f"{i}: {action.description}")
 
