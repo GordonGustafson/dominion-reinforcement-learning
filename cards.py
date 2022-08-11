@@ -23,11 +23,14 @@ _GameStateBase = NamedTuple("GameState", [
 
 class GameState(_GameStateBase):
     def __eq__(self, other):
+        # The default implementation uses ==, which doesn't work for numpy arrays
         return (self.cleanup_phase == other.cleanup_phase
                 and card_counts_equal(self.hand, other.hand)
                 and card_counts_equal(self.deck, other.deck)
                 and card_counts_equal(self.discard_pile, other.discard_pile))
 
+    def __ne__(self, other):
+        return not (self == other)
 
 Action = NamedTuple("Action", [
     ("game_state", GameState),

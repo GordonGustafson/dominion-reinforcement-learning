@@ -30,7 +30,7 @@ class TestCards(unittest.TestCase):
         ]
         for (card_names_dict, expected_treasure_total) in cases:
             card_counts = dict_to_card_counts(card_names_dict)
-            self.assertTrue(treasure_total(card_counts) == expected_treasure_total)
+            self.assertEqual(treasure_total(card_counts), expected_treasure_total)
 
     def test_vp_total(self):
         cases = [
@@ -42,7 +42,20 @@ class TestCards(unittest.TestCase):
         ]
         for (card_names_dict, expected_vp_total) in cases:
             card_counts = dict_to_card_counts(card_names_dict)
-            self.assertTrue(vp_total(card_counts) == expected_vp_total)
+            self.assertEqual(vp_total(card_counts), expected_vp_total)
+
+    def test_game_state_equals(self):
+        game_state        = GameState(cleanup_phase=False, hand=dict_to_card_counts({"copper": 1}), deck=dict_to_card_counts({"estate": 2}), discard_pile=dict_to_card_counts({"silver": 3}))
+        different_cleanup = GameState(cleanup_phase=True,  hand=dict_to_card_counts({"copper": 1}), deck=dict_to_card_counts({"estate": 2}), discard_pile=dict_to_card_counts({"silver": 3}))
+        different_hand    = GameState(cleanup_phase=False, hand=dict_to_card_counts({"copper": 9}), deck=dict_to_card_counts({"estate": 2}), discard_pile=dict_to_card_counts({"silver": 3}))
+        different_deck    = GameState(cleanup_phase=False, hand=dict_to_card_counts({"copper": 1}), deck=dict_to_card_counts({"estate": 9}), discard_pile=dict_to_card_counts({"silver": 3}))
+        different_discard = GameState(cleanup_phase=False, hand=dict_to_card_counts({"copper": 1}), deck=dict_to_card_counts({"estate": 2}), discard_pile=dict_to_card_counts({"silver": 9}))
+
+        self.assertEqual(game_state, game_state)
+        self.assertNotEqual(game_state, different_cleanup)
+        self.assertNotEqual(game_state, different_hand)
+        self.assertNotEqual(game_state, different_deck)
+        self.assertNotEqual(game_state, different_discard)
 
     def test_buy_phase_options(self):
         buy_game_state = GameState(cleanup_phase=False,
@@ -59,7 +72,7 @@ class TestCards(unittest.TestCase):
             Action(cleanup_game_state._replace(discard_pile=add_card_by_name(discard_pile, "estate")), "buy estate"),
             Action(cleanup_game_state._replace(discard_pile=add_card_by_name(discard_pile, "duchy")), "buy duchy"),
         ]
-        self.assertTrue(buy_phase_options(buy_game_state) == expected_options)
+        self.assertEqual(buy_phase_options(buy_game_state), expected_options)
 
     def test_draw_card(self):
         game_state = GameState(cleanup_phase=False,
@@ -86,13 +99,24 @@ class TestCards(unittest.TestCase):
                                                deck=dict_to_card_counts({}),
                                                discard_pile=dict_to_card_counts({}))
 
-
         self.assertTrue(draw_card(game_state) in possibilities_after_one_draw)
-        self.assertTrue(draw_card(draw_card(game_state)) == exp_after_two_draws)
+        self.assertEqual(draw_card(draw_card(game_state)), exp_after_two_draws)
         # No change when deck and discard pile are both empty
-        self.assertTrue(draw_card(draw_card(draw_card(game_state))) == exp_after_three_draws)
-        self.assertTrue(draw_card(draw_card(draw_card(draw_card(game_state)))) == exp_after_three_draws)
+        self.assertEqual(draw_card(draw_card(draw_card(game_state))), exp_after_three_draws)
+        self.assertEqual(draw_card(draw_card(draw_card(draw_card(game_state)))), exp_after_three_draws)
 
+    def do_cleanup_phase_if_set(self):
+        game_state = GameState(cleanup_phase=True,
+                               hand=dict_to_card_counts({"copper": 5}),
+                               deck=dict_to_card_counts({"estate": 2}),
+                               discard_pile=dict_to_card_counts({"copper": 2}))
+
+        game_state_after_cleanup = GameState(cleanup_phase=True,
+                                             hand=dict_to_card_counts({"copper": 3, "estate": 2}),
+                                             deck=dict_to_card_counts({"copper": 5}),
+                                             discard_pile=dict_to_card_counts({}))
+
+        self.assertEqual(game_state, game_state_after_cleanup)
 
 if __name__ == '__main__':
     unittest.main()
