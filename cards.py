@@ -25,6 +25,7 @@ class Player(_PlayerBase):
 _GameStateBase = NamedTuple("GameState", [
     ("players", List[Player]),
     ("current_player_index", int),
+    ("supply", CardCounts),
     ("cleanup_phase", bool),
 ])
 
@@ -33,6 +34,7 @@ class GameState(_GameStateBase):
         # The default implementation uses ==, which doesn't work for numpy arrays
         return (self.players == other.players
                 and self.current_player_index == other.current_player_index
+                and card_counts_equal(self.supply, other.supply)
                 and self.cleanup_phase == other.cleanup_phase)
 
     def __ne__(self, other):
@@ -122,15 +124,17 @@ def buy_phase_options(buy_game_state: GameState) -> List[Action]:
     player = buy_game_state.current_player()
     total_money_for_turn = treasure_total(player.hand)
 
-    # TODO: only allow buying from non-empty buy piles
-    buyable_card_indices = CARD_DEFS.index[CARD_DEFS['cost'] <= total_money_for_turn].to_list()
+    buyable_card_indices = CARD_DEFS.index[(CARD_DEFS['cost'] <= total_money_for_turn)
+                                           & (buy_game_state.supply > 0)].to_list()
 
     cleanup_game_state = buy_game_state._replace(cleanup_phase=True)
     buy_nothing = Action(game_state=cleanup_game_state, description="buy nothing")
     actions = [buy_nothing]
     for buyable_card_index in buyable_card_indices:
-        game_state = cleanup_game_state.replace_current_player_kwargs(
-            discard_pile=add_card(player.discard_pile, buyable_card_index))
+        game_state = (cleanup_game_state
+                      ._replace(supply=remove_card(cleanup_game_state.supply, buyable_card_index))
+                      .replace_current_player_kwargs(discard_pile=add_card(player.discard_pile,
+                                                                           buyable_card_index)))
 
         card_name = CARD_DEFS["name"][buyable_card_index]
         actions.append(Action(game_state, f"buy {card_name}"))
@@ -189,6 +193,44 @@ def initial_player_state() -> Player:
 
     return player
 
+def initial_base_card_counts(num_players: int) -> Dict[str, int]:
+    # Rulebook doesn't include rules for 1 player games so we can put whatever
+    # we want here.
+    if num_players == 1:
+        return {"copper": 53,
+                "silver": 40,
+                "gold": 30,
+                "curse": 10,
+                "estate": 4,
+                "duchy": 4,
+                "province": 4}
+    if num_players == 2:
+        return {"copper": 46,
+                "silver": 40,
+                "gold": 30,
+                "curse": 10,
+                "estate": 8,
+                "duchy": 8,
+                "province": 8}
+    elif num_players == 3:
+        return {"copper": 39,
+                "silver": 40,
+                "gold": 30,
+                "curse": 20,
+                "estate": 12,
+                "duchy": 12,
+                "province": 12}
+    elif num_players == 4:
+        return {"copper": 32,
+                "silver": 40,
+                "gold": 30,
+                "curse": 30,
+                "estate": 12,
+                "duchy": 12,
+                "province": 12}
+    else:
+        assert False, f"Invalid number of players: {num_players}"
+
 def initial_game_state(num_players: int) -> GameState:
     # TODO: account for copper and estates being taken into starting hands
     # return dict_to_card_counts({
@@ -201,17 +243,13 @@ def initial_game_state(num_players: int) -> GameState:
     # })
     return GameState(players=[initial_player_state() for _ in range(num_players)],
                      current_player_index=0,
+                     supply=dict_to_card_counts(initial_base_card_counts(num_players)),
                      cleanup_phase=False)
 
-def num_provinces(player: Player) -> int:
-    return (num_copies_of_card(player.hand, "province")
-            + num_copies_of_card(player.deck, "province")
-            + num_copies_of_card(player.discard_pile, "province"))
-
 def game_completed(game_state: GameState) -> bool:
-    # hack until we add supply piles
-    print(sum(num_provinces(player) for player in game_state.players))
-    return sum(num_provinces(player) for player in game_state.players) >= 2
+    num_empty_piles = np.sum(game_state.supply == 0)
+    return (num_empty_piles >= 3
+            or num_copies_of_card(game_state.supply, "province") == 0)
 
 def game_flow(num_players: int, option_choosers: List):
     game_state = initial_game_state(num_players)
