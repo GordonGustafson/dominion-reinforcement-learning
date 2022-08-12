@@ -273,4 +273,9 @@ def user_option_chooser(game_state: GameState, actions: List[Action]) -> int:
     for i, action in enumerate(actions):
         print(f"{i}: {action.description}")
 
-    return int(input())
+    selected_option = int(input())
+    while selected_option >= len(actions) or selected_option < 0:
+        print("index out of bounds, try again")
+        selected_option = int(input())
+
+    return selected_option
