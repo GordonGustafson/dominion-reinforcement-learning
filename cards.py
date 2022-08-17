@@ -58,14 +58,17 @@ Action = NamedTuple("Action", [
     ("description", str),
 ])
 
-CARD_DEFS = pd.DataFrame(columns=["cost", "victory_points", "money_produced", "name"], data=[
-    [0, 0, 1, "copper"],
-    [3, 0, 2, "silver"],
-    [6, 0, 3, "gold"],
-    [2, 1, 0, "estate"],
-    [5, 3, 0, "duchy"],
-    [8, 6, 0, "province"],
-])
+# TODO: should we use the same "money_produced" field for both treasures and actions?
+_RAW_CARD_DEFS = [
+    {"name": "copper",   "cost": 0, "money_produced": 1},
+    {"name": "silver",   "cost": 3, "money_produced": 2},
+    {"name": "gold",     "cost": 6, "money_produced": 3},
+    {"name": "estate",   "cost": 2, "victory_points": 1},
+    {"name": "duchy",    "cost": 5, "victory_points": 3},
+    {"name": "province", "cost": 8, "victory_points": 6},
+]
+
+CARD_DEFS = pd.DataFrame.from_dict(_RAW_CARD_DEFS).fillna(0)
 
 NUM_CARDS_DEFINED = CARD_DEFS.shape[0]
 
