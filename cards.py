@@ -19,6 +19,7 @@ class Player(_PlayerBase):
                 and card_counts_equal(self.deck, other.deck)
                 and card_counts_equal(self.discard_pile, other.discard_pile))
 
+    # I think this is necessary because NamedTuple overrides __ne__ in some fancy way???
     def __ne__(self, other):
         return not (self == other)
 
@@ -43,6 +44,7 @@ class GameState(_GameStateBase):
     def current_player(self) -> Player:
         return self.players[self.current_player_index]
 
+    # These replace_current_player... methods are syntactic sugar for making other code clearer
     def replace_current_player(self, player):
         players_copy = self.players[:]
         players_copy[self.current_player_index] = player
@@ -76,6 +78,9 @@ def num_cards(card_counts: CardCounts) -> int:
 def card_counts_equal(lhs: CardCounts, rhs: CardCounts) -> bool:
     return np.array_equal(lhs, rhs)
 
+def card_name_to_index(card_name: str) -> int:
+    return CARD_DEFS.index[CARD_DEFS['name'] == card_name].item()
+
 def add_card(card_counts: CardCounts, card_index: int) -> CardCounts:
     card_counts_copy = card_counts.copy()
     card_counts_copy[card_index] += 1
@@ -89,9 +94,13 @@ def remove_card(card_counts: CardCounts, card_index: int) -> CardCounts:
     card_counts_copy[card_index] -= 1
     return card_counts_copy
 
+def add_card_by_name(card_counts: CardCounts, card_name: str) -> CardCounts:
+    card_index = card_name_to_index(card_name)
+    return add_card(card_counts, card_index)
 
-def card_name_to_index(card_name: str) -> int:
-    return CARD_DEFS.index[CARD_DEFS['name'] == card_name].item()
+def remove_card_by_name(card_counts: CardCounts, card_name: str) -> CardCounts:
+    card_index = card_name_to_index(card_name)
+    return remove_card(card_counts, card_index)
 
 def num_copies_of_card(card_counts: CardCounts, card_name: str) -> int:
     card_index = card_name_to_index(card_name)
@@ -232,15 +241,6 @@ def initial_base_card_counts(num_players: int) -> Dict[str, int]:
         assert False, f"Invalid number of players: {num_players}"
 
 def initial_game_state(num_players: int) -> GameState:
-    # TODO: account for copper and estates being taken into starting hands
-    # return dict_to_card_counts({
-    #     "copper": 60,
-    #     "silver": 40,
-    #     "gold": 30,
-    #     "estate": 24,
-    #     "duchy": 12,
-    #     "province": 8,
-    # })
     return GameState(players=[initial_player_state() for _ in range(num_players)],
                      current_player_index=0,
                      supply=dict_to_card_counts(initial_base_card_counts(num_players)),

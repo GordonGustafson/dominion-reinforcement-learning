@@ -3,23 +3,6 @@ from cards import *
 import unittest
 
 
-def add_card_by_name(card_counts: CardCounts, card_name: str) -> CardCounts:
-    card_index = card_name_to_index(card_name)
-    return add_card(card_counts, card_index)
-
-def remove_card_by_name(card_counts: CardCounts, card_name: str) -> CardCounts:
-    card_index = card_name_to_index(card_name)
-    return remove_card(card_counts, card_index)
-
-def card_counts_equal(lhs: CardCounts, rhs: CardCounts) -> bool:
-    return np.array_equal(lhs, rhs)
-
-def game_states_equal(lhs: GameState, rhs: GameState) -> bool:
-    return (lhs.cleanup_phase == rhs.cleanup_phase
-            and card_counts_equal(lhs.hand, rhs.hand)
-            and card_counts_equal(lhs.deck, rhs.deck)
-            and card_counts_equal(lhs.discard_pile, rhs.discard_pile))
-
 class TestCards(unittest.TestCase):
     def test_treasure_total(self):
         cases = [
