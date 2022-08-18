@@ -60,12 +60,59 @@ Action = NamedTuple("Action", [
 
 # TODO: should we use the same "money_produced" field for both treasures and actions?
 _RAW_CARD_DEFS = [
-    {"name": "copper",   "cost": 0, "money_produced": 1},
-    {"name": "silver",   "cost": 3, "money_produced": 2},
-    {"name": "gold",     "cost": 6, "money_produced": 3},
-    {"name": "estate",   "cost": 2, "victory_points": 1},
-    {"name": "duchy",    "cost": 5, "victory_points": 3},
-    {"name": "province", "cost": 8, "victory_points": 6},
+    {"name": "copper",   "cost": 0, "money_produced": 1, "type": "treasure"},
+    {"name": "silver",   "cost": 3, "money_produced": 2, "type": "treasure"},
+    {"name": "gold",     "cost": 6, "money_produced": 3, "type": "treasure"},
+
+    {"name": "estate",   "cost": 2, "victory_points": 1, "type": "victory"},
+    {"name": "duchy",    "cost": 5, "victory_points": 3, "type": "victory"},
+    {"name": "province", "cost": 8, "victory_points": 6, "type": "victory"},
+
+    # +cards
+    # {"name": "Smithy",       "cost": 4, "draw_cards": 3,}
+
+    # +actions
+    # {"name": "Laboratory",   "cost": 5, "type": "action", "draw_cards": 2, "actions": 1,}
+    # {"name": "Village",      "cost": 3, "type": "action", "draw_cards": 1, "actions": 2,}
+
+    # trashing cards
+    # {"name": "Chapel",       "cost": 2, "type": "action", "trash_up_to_X_cards_from_your_hand": 4,
+    # {"name": "Sentry",       "cost": 5, "type": "action", "actions": 1, @"+1 card . Look at the top 2 cards of your deck. Trash and/or discard any number of them, put the rest back on top in any order"
+
+    # gaining cards
+    # {"name": "Workshop",     "cost": 3, "type": "action", @"gain_a_card_costing_up_to_4": 1
+    # {"name": "Remodel",      "cost": 4, "type": "action", @"trash a card from your hand. gain a card costing up to 2 more than it"
+    # {"name": "Mine",         "cost": 5, "type": "action", @"you may trash a treasure from your hand. gain a treasure to your hand costing up to $3 more than it"
+
+    # +buys
+    # {"name": "Festival",     "cost": 5, "type": "action", "actions": 2, @", +1 buy, +2$"
+    # {"name": "Market",       "cost": 5, "type": "action", "draw_cards": 1, "actions": 1, @"+1$ +1 buy"
+    # {"name": "Council Room", "cost": 5, "type": "action", "draw_cards": 4, @"+1 buy, each other player drawns a card"
+
+    # VP cards
+    # {"name": "Gardens",      "cost": 4, "type": "victory", @"worth 1 vp per 10 cards you have (rounded down)"
+
+    # simple draw/discard effects
+    # {"name": "Cellar",       "cost": 2, "type": "action", "actions": 1, "discard_any_number_then_draw_that_many": 1,
+    # {"name": "Harbinger",    "cost": 3, "type": "action", "draw_cards": 1, "actions": 1, "put_any_card_from_discard_pile_onto_deck": 1,
+    # {"name": "Poacher",      "cost": 4, "type": "action", "draw_cards": 1, "actions": 1, @"+1$, discard a card per empty supply pile"
+
+    # attacks
+    # {"name": "Witch",        "cost": 5, "type": "action", "draw_cards": 2, @"each other player gains a curse"
+    # {"name": "Militia",      "cost": 4, "type": "action", @"+2$ each other player discards down to 3 cards in hand"
+    # {"name": "Bandit",       "cost": 5, "type": "action", @"gain a gold. each other player reveals the top 2 cards of their deck, trashes a revealed treasure other than copper, and discards the rest"
+    # {"name": "Bureaucrat",   "cost": 4, "type": "action", @"gain a silver onto your deck. each other player reveals a victory card from their hand it puts it onto their deck (or reveals a hand with no victory cards)"
+
+    # interacting with other cards
+    # {"name": "Moneylender",  "cost": 4, "type": "action", @"you may trash a copper from your hand for +3$"
+    # {"name": "Merchant",     "cost": 3, "type": "action", "draw_cards": 1, "actions": 1, "the_first_time_you_play_a_silver_this_turn_+1_money": 1,
+    # {"name": "Moat",         "cost": 2, "type": "action", "draw_cards": 2, "moat_effect": 1,
+
+    # new types of game state or choices
+    # {"name": "Throne Room",  "cost": 4, "type": "action", @"you may play an action card from your hand twice"
+    # {"name": "Vassal",       "cost": 3, "type": "action", "money_produced": 2, "Discard_the_top_card_of_your_deck_if_it's_an_action_card,_you_may_play_it": 1,
+    # {"name": "Artisan",      "cost": 6, "type": "action", @"gain a card to your hand costing up to $5. put a card from your hand onto your deck"
+    # {"name": "Library",      "cost": 5, "type": "action", @"draw until you have 7 cards in hand, skipping any action cards you choose to. Set those aside, discarding them afterwards"
 ]
 
 CARD_DEFS = pd.DataFrame.from_dict(_RAW_CARD_DEFS).fillna(0)
