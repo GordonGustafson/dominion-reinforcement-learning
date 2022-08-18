@@ -23,11 +23,18 @@ class Player(_PlayerBase):
     def __ne__(self, other):
         return not (self == other)
 
+# TODO: make this a proper Python enum
+class TURN_PHASES:
+    ACTION = "ACTION"
+    BUY = "BUY"
+    CLEANUP = "CLEANUP"
+
 _GameStateBase = NamedTuple("GameState", [
     ("players", List[Player]),
     ("current_player_index", int),
     ("supply", CardCounts),
-    ("cleanup_phase", bool),
+    # TODO: proper type annotation for this
+    ("turn_phase", str),
 ])
 
 class GameState(_GameStateBase):
@@ -36,7 +43,7 @@ class GameState(_GameStateBase):
         return (self.players == other.players
                 and self.current_player_index == other.current_player_index
                 and card_counts_equal(self.supply, other.supply)
-                and self.cleanup_phase == other.cleanup_phase)
+                and self.turn_phase == other.turn_phase)
 
     def __ne__(self, other):
         return not (self == other)
@@ -186,7 +193,7 @@ def buy_phase_options(buy_game_state: GameState) -> List[Action]:
     buyable_card_indices = CARD_DEFS.index[(CARD_DEFS['cost'] <= total_money_for_turn)
                                            & (buy_game_state.supply > 0)].to_list()
 
-    cleanup_game_state = buy_game_state._replace(cleanup_phase=True)
+    cleanup_game_state = buy_game_state._replace(turn_phase=TURN_PHASES.CLEANUP)
     buy_nothing = Action(game_state=cleanup_game_state, description="buy nothing")
     actions = [buy_nothing]
     for buyable_card_index in buyable_card_indices:
@@ -216,11 +223,10 @@ def draw_card(player: Player) -> Player:
     return player
 
 def do_cleanup_phase_if_set(game_state: GameState) -> GameState:
-    if not game_state.cleanup_phase:
+    if not game_state.turn_phase != TURN_PHASES.CLEANUP:
         return game_state
 
     # Discard your hand
-    game_state = game_state._replace(cleanup_phase=False)
     game_state = game_state.replace_current_player_kwargs(
         hand=empty_card_counts(),
         discard_pile=add_card_counts(game_state.current_player().hand,
@@ -239,6 +245,8 @@ def do_cleanup_phase_if_set(game_state: GameState) -> GameState:
     if index >= num_players:
         index = index % num_players
     game_state = game_state._replace(current_player_index=index)
+
+    game_state = game_state._replace(turn_phase=TURN_PHASES.ACTION)
 
     return game_state
 
@@ -294,7 +302,7 @@ def initial_game_state(num_players: int) -> GameState:
     return GameState(players=[initial_player_state() for _ in range(num_players)],
                      current_player_index=0,
                      supply=dict_to_card_counts(initial_base_card_counts(num_players)),
-                     cleanup_phase=False)
+                     turn_phase=TURN_PHASES.ACTION)
 
 def game_completed(game_state: GameState) -> bool:
     num_empty_piles = np.sum(game_state.supply == 0)
