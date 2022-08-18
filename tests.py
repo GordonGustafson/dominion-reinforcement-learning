@@ -90,7 +90,7 @@ class TestCards(unittest.TestCase):
         self.assertEqual(draw_card(draw_card(draw_card(player))), exp_after_three_draws)
         self.assertEqual(draw_card(draw_card(draw_card(draw_card(player)))), exp_after_three_draws)
 
-    def do_cleanup_phase_if_set(self):
+    def do_cleanup_phase(self):
         game_state = GameState(turn_phase=TURN_PHASES.CLEANUP,
                                current_player_index=1,
                                players=[Player(hand=dict_to_card_counts({"copper": 5}),

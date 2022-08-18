@@ -222,9 +222,8 @@ def draw_card(player: Player) -> Player:
 
     return player
 
-def do_cleanup_phase_if_set(game_state: GameState) -> GameState:
-    if not game_state.turn_phase != TURN_PHASES.CLEANUP:
-        return game_state
+def do_cleanup_phase(game_state: GameState) -> GameState:
+    assert game_state.turn_phase == TURN_PHASES.CLEANUP
 
     # Discard your hand
     game_state = game_state.replace_current_player_kwargs(
@@ -320,7 +319,7 @@ def game_flow(num_players: int, option_choosers: List):
         game_state = selected_action.game_state
         print(selected_action.description)
 
-        game_state = do_cleanup_phase_if_set(game_state)
+        game_state = do_cleanup_phase(game_state)
 
     for i, player in enumerate(game_state.players):
         print(f"player {i} score: {total_player_vp(player)}")
