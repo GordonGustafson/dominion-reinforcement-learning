@@ -82,7 +82,7 @@ class GameState(_GameStateBase):
     def replace_current_player_kwargs(self, **kwargs):
         return self.replace_current_player(self.current_player()._replace(**kwargs))
 
-Action = NamedTuple("Action", [
+Choice = NamedTuple("Choice", [
     ("game_state", GameState),
     ("description", str),
 ])
@@ -231,11 +231,11 @@ def card_counts_to_dict(card_counts: CardCounts) -> Dict[str, int]:
             if num_occurrences > 0}
 
 ################################################################################
-#                                                                      Options #
+#                                                                      Choices #
 ################################################################################
 
 # TODO: make this return a set? Will need to stop using List in GameState
-def buy_phase_options(buy_game_state: GameState) -> List[Action]:
+def buy_phase_choices(buy_game_state: GameState) -> List[Choice]:
     player = buy_game_state.current_player()
     total_money_for_turn = treasure_total(player.hand)
 
@@ -245,17 +245,17 @@ def buy_phase_options(buy_game_state: GameState) -> List[Action]:
                      and card.cost <= total_money_for_turn]
 
     cleanup_game_state = buy_game_state._replace(turn_phase=TURN_PHASES.CLEANUP)
-    buy_nothing = Action(game_state=cleanup_game_state, description="buy nothing")
-    actions = [buy_nothing]
+    buy_nothing = Choice(game_state=cleanup_game_state, description="buy nothing")
+    choices = [buy_nothing]
     for buyable_card in buyable_cards:
         game_state = (cleanup_game_state
                       ._replace(supply=remove_card(supply, buyable_card))
                       .replace_current_player_kwargs(discard_pile=add_card(player.discard_pile,
                                                                            buyable_card)))
 
-        actions.append(Action(game_state, f"buy {buyable_card.name}"))
+        choices.append(Choice(game_state, f"buy {buyable_card.name}"))
 
-    return actions
+    return choices
 
 def draw_card(player: Player) -> Player:
     if num_cards(player.deck) == 0 and num_cards(player.discard_pile) == 0:
@@ -364,16 +364,16 @@ def game_completed(game_state: GameState) -> bool:
     return (num_empty_piles >= 3
             or num_copies_of_card(game_state.supply, "province") == 0)
 
-def game_flow(num_players: int, option_choosers: List):
+def game_flow(num_players: int, choosers: List):
     game_state = initial_game_state(num_players)
 
     while not game_completed(game_state):
-        possible_actions = buy_phase_options(game_state)
+        possible_choices = buy_phase_choices(game_state)
 
-        selected_action_index = option_choosers[game_state.current_player_index](game_state, possible_actions)
-        selected_action = possible_actions[selected_action_index]
-        game_state = selected_action.game_state
-        print(selected_action.description)
+        selected_choice_index = choosers[game_state.current_player_index](game_state, possible_choices)
+        selected_choice = possible_choices[selected_choice_index]
+        game_state = selected_choice.game_state
+        print(selected_choice.description)
 
         game_state = do_cleanup_phase(game_state)
 
@@ -381,14 +381,14 @@ def game_flow(num_players: int, option_choosers: List):
         print(f"player {i} score: {total_player_vp(player)}")
 
 
-def user_option_chooser(game_state: GameState, actions: List[Action]) -> int:
+def user_chooser(game_state: GameState, choices: List[Choice]) -> int:
     print(f"hand: {card_counts_to_dict(game_state.current_player().hand)}")
-    for i, action in enumerate(actions):
-        print(f"{i}: {action.description}")
+    for i, choice in enumerate(choices):
+        print(f"{i}: {choice.description}")
 
-    selected_option = input()
-    while selected_option == '' or int(selected_option) >= len(actions) or int(selected_option) < 0:
+    selected_choice = input()
+    while selected_choice == '' or int(selected_choice) >= len(choices) or int(selected_choice) < 0:
         print("index out of bounds, try again")
-        selected_option = input()
+        selected_choice = input()
 
-    return int(selected_option)
+    return int(selected_choice)
