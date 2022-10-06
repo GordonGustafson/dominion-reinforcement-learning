@@ -28,22 +28,11 @@ def make_card(name, cost, action_effects=(), treasure_effects=(), vp_effects=())
 
 CardCounts = Multiset
 
-_PlayerBase = NamedTuple("Player", [
+Player = NamedTuple("Player", [
     ("hand", CardCounts),
     ("deck", CardCounts),
     ("discard_pile", CardCounts),
 ])
-
-class Player(_PlayerBase):
-    def __eq__(self, other):
-        # The default implementation uses ==, which doesn't work for numpy arrays
-        return (card_counts_equal(self.hand, other.hand)
-                and card_counts_equal(self.deck, other.deck)
-                and card_counts_equal(self.discard_pile, other.discard_pile))
-
-    # I think this is necessary because NamedTuple overrides __ne__ in some fancy way???
-    def __ne__(self, other):
-        return not (self == other)
 
 # TODO: make this a proper Python enum
 class TURN_PHASES:
@@ -61,17 +50,6 @@ _GameStateBase = NamedTuple("GameState", [
 ])
 
 class GameState(_GameStateBase):
-    def __eq__(self, other):
-        # The default implementation uses ==, which doesn't work for numpy arrays
-        return (self.players == other.players
-                and self.current_player_index == other.current_player_index
-                and card_counts_equal(self.supply, other.supply)
-                and self.turn_phase == other.turn_phase
-                and self.pending_effects == other.pending_effects)
-
-    def __ne__(self, other):
-        return not (self == other)
-
     def current_player(self) -> Player:
         return self.players[self.current_player_index]
 
