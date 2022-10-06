@@ -1,5 +1,6 @@
 import random
 
+from multiset import Multiset
 from typing import NamedTuple, Tuple, List, Dict
 
 
@@ -25,7 +26,7 @@ Card = NamedTuple("Card", [
 def make_card(name, cost, action_effects=(), treasure_effects=(), vp_effects=()):
     return Card(name, cost, action_effects, treasure_effects, vp_effects)
 
-CardCounts = Dict[Card, int]
+CardCounts = Multiset
 
 _PlayerBase = NamedTuple("Player", [
     ("hand", CardCounts),
@@ -147,14 +148,14 @@ CARD_DEFS = {
 
 
 def empty_card_counts():
-    return {}
+    return Multiset()
 
 def num_cards(card_counts: CardCounts) -> int:
     return sum(card_counts.values())
 
 def card_counts_equal(lhs: CardCounts, rhs: CardCounts) -> bool:
-    return ({c: f for c, f in lhs.items() if f > 0}
-            == {c: f for c, f in rhs.items() if f > 0})
+    # Multiset implements == properly
+    return lhs == rhs
 
 def add_card(card_counts: CardCounts, card: Card) -> CardCounts:
     card_counts_copy = card_counts.copy()
@@ -173,7 +174,7 @@ def remove_card(card_counts: CardCounts, card: Card) -> CardCounts:
     return card_counts_copy
 
 def dict_to_card_counts(card_names_dict: Dict[str, int]) -> CardCounts:
-    result = {}
+    result = empty_card_counts()
     for card_name, card_occurrences in card_names_dict.items():
         result[CARD_DEFS[card_name]] = card_occurrences
     return result
@@ -199,13 +200,7 @@ def vp_total(card_counts: CardCounts) -> int:
     return total
 
 def add_card_counts(card_counts_lhs: CardCounts, card_counts_rhs: CardCounts) -> CardCounts:
-    result = card_counts_lhs.copy()
-    for card, card_occurrences in card_counts_rhs.items():
-        if card in result:
-            result[card] += card_occurrences
-        else:
-            result[card] = card_occurrences
-    return result
+    return card_counts_lhs + card_counts_rhs
 
 def total_player_vp(player: Player) -> int:
     return vp_total(player.hand) + vp_total(player.deck) + vp_total(player.discard_pile)
@@ -245,7 +240,7 @@ def buy_phase_options(buy_game_state: GameState) -> List[Action]:
     total_money_for_turn = treasure_total(player.hand)
 
     supply = buy_game_state.supply
-    buyable_cards = [card for card in supply.keys()
+    buyable_cards = [card for card in supply.distinct_elements()
                      if supply[card] > 0
                      and card.cost <= total_money_for_turn]
 
