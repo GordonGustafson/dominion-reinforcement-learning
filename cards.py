@@ -57,6 +57,7 @@ _GameStateBase = NamedTuple("GameState", [
     ("supply", CardCounts),
     # TODO: proper type annotation for this
     ("turn_phase", str),
+    ("pending_effects", Tuple[Effect])
 ])
 
 class GameState(_GameStateBase):
@@ -65,7 +66,8 @@ class GameState(_GameStateBase):
         return (self.players == other.players
                 and self.current_player_index == other.current_player_index
                 and card_counts_equal(self.supply, other.supply)
-                and self.turn_phase == other.turn_phase)
+                and self.turn_phase == other.turn_phase
+                and self.pending_effects == other.pending_effects)
 
     def __ne__(self, other):
         return not (self == other)
@@ -97,10 +99,10 @@ CARD_DEFS = {
     "duchy":    make_card(name="duchy",    cost=5, vp_effects=(Effect(EFFECT_NAME.VP, 3),)),
     "province": make_card(name="province", cost=8, vp_effects=(Effect(EFFECT_NAME.VP, 6),)),
 
-    "curse":   make_card(name="curse",   cost=0, vp_effects=(Effect(EFFECT_NAME.VP, -1),)),
+    "curse":    make_card(name="curse",    cost=0, vp_effects=(Effect(EFFECT_NAME.VP, -1),)),
 
     # +cards
-    # {"name": "Smithy",       "cost": 4, EFFECT_NAME.DRAW_CARDS: 3,}
+    "smithy":    make_card(name="smithy",  cost=4, action_effects=(Effect(EFFECT_NAME.DRAW_CARDS, 3),)),
 
     # +actions
     # {"name": "Laboratory",   "cost": 5, "type": "action", EFFECT_NAME.DRAW_CARDS: 2, "actions": 1,}
@@ -234,6 +236,24 @@ def card_counts_to_dict(card_counts: CardCounts) -> Dict[str, int]:
 #                                                                      Choices #
 ################################################################################
 
+def action_phase_choices(action_game_state: GameState) -> List[Choice]:
+    player = action_game_state.current_player()
+    buy_game_state = action_game_state._replace(turn_phase=TURN_PHASES.BUY)
+
+    play_nothing = Choice(game_state=buy_game_state, description="play no actions")
+    choices = [play_nothing]
+
+    playable_actions = [card for card in player.hand
+                        if len(card.action_effects) > 0]
+    for action in playable_actions:
+        pending_effects = buy_game_state.pending_effects + action.action_effects
+        game_state = buy_game_state._replace(pending_effects=pending_effects)
+        game_state = discard_specific_card_current_player(game_state, action)
+
+        choices.append(Choice(game_state, f"play {action.name}"))
+
+    return choices
+
 # TODO: make this return a set? Will need to stop using List in GameState
 def buy_phase_choices(buy_game_state: GameState) -> List[Choice]:
     player = buy_game_state.current_player()
@@ -274,6 +294,28 @@ def draw_card(player: Player) -> Player:
 
     return player
 
+def discard_specific_card_current_player(game_state: GameState, card_discarded: Card) -> Player:
+    player = game_state.current_player()
+    return game_state.replace_current_player_kwargs(
+        hand=remove_card(player.hand, card_discarded),
+        discard_pile=add_card(player.discard_pile, card_discarded))
+
+def draw_cards_current_player(game_state: GameState, num_cards_to_draw: int) -> GameState:
+    player = game_state.current_player()
+    for _ in range(num_cards_to_draw):
+        player = draw_card(player)
+    return game_state.replace_current_player(player)
+
+def resolve_pending_effect(game_state: GameState) -> GameState:
+    effect = game_state.pending_effects[0]
+    remaining_effects = game_state.pending_effects[1:]
+    game_state = game_state._replace(pending_effects=remaining_effects)
+
+    if effect.name == EFFECT_NAME.DRAW_CARDS:
+        return draw_cards_current_player(game_state, effect.value)
+    else:
+        raise ValueError("resolve_pending_effect does not support effect named '{effec.name}'")
+
 def do_cleanup_phase(game_state: GameState) -> GameState:
     assert game_state.turn_phase == TURN_PHASES.CLEANUP
 
@@ -285,10 +327,7 @@ def do_cleanup_phase(game_state: GameState) -> GameState:
     )
 
     # draw 5 cards
-    player = game_state.current_player()
-    for _ in range(5):
-        player = draw_card(player)
-    game_state = game_state.replace_current_player(player)
+    game_state = draw_cards_current_player(game_state, 5)
 
     # Move to next player
     index = game_state.current_player_index + 1
@@ -301,6 +340,10 @@ def do_cleanup_phase(game_state: GameState) -> GameState:
 
     return game_state
 
+################################################################################
+#                                                              Starting a Game #
+################################################################################
+
 def initial_player_state() -> Player:
     player = Player(hand=dict_to_card_counts({}),
                     deck=dict_to_card_counts({"estate": 3, "copper": 7}),
@@ -311,7 +354,7 @@ def initial_player_state() -> Player:
 
     return player
 
-def initial_base_card_counts(num_players: int) -> Dict[str, int]:
+def initial_supply_base_cards(num_players: int) -> Dict[str, int]:
     # Rulebook doesn't include rules for 1 player games so we can put whatever
     # we want here.
     if num_players == 1:
@@ -349,11 +392,21 @@ def initial_base_card_counts(num_players: int) -> Dict[str, int]:
     else:
         assert False, f"Invalid number of players: {num_players}"
 
+def initial_supply(num_players: int) -> Dict[str, int]:
+    card_dict = initial_supply_base_cards(num_players)
+    card_dict["smithy"] = 10
+    return card_dict
+
 def initial_game_state(num_players: int) -> GameState:
     return GameState(players=[initial_player_state() for _ in range(num_players)],
                      current_player_index=0,
-                     supply=dict_to_card_counts(initial_base_card_counts(num_players)),
+                     pending_effects=(),
+                     supply=dict_to_card_counts(initial_supply(num_players)),
                      turn_phase=TURN_PHASES.ACTION)
+
+################################################################################
+#                                                               Playing a Game #
+################################################################################
 
 def game_completed(game_state: GameState) -> bool:
     # distinguish between an card that has been fully bought up and a card that wasn't in the game
@@ -364,18 +417,37 @@ def game_completed(game_state: GameState) -> bool:
     return (num_empty_piles >= 3
             or num_copies_of_card(game_state.supply, "province") == 0)
 
+def offer_choice(game_state, choices, chooser) -> GameState:
+    if len(choices) == 1:
+        return choices[0].game_state
+
+    # Keeping game_state as an argument, even though it may not be needed by value function approximation
+    selected_choice_index = chooser(game_state, choices)
+    selected_choice = choices[selected_choice_index]
+    print(selected_choice.description)
+    return selected_choice.game_state
+
+def game_step(game_state: GameState, choosers: List) -> GameState:
+    current_player_chooser = choosers[game_state.current_player_index]
+
+    if len(game_state.pending_effects) > 0:
+        return resolve_pending_effect(game_state)
+    elif game_state.turn_phase == TURN_PHASES.ACTION:
+        choices = action_phase_choices(game_state)
+        return offer_choice(game_state, choices, current_player_chooser)
+    elif game_state.turn_phase == TURN_PHASES.BUY:
+        choices = buy_phase_choices(game_state)
+        return offer_choice(game_state, choices, current_player_chooser)
+    elif game_state.turn_phase == TURN_PHASES.CLEANUP:
+        return do_cleanup_phase(game_state)
+    else:
+        raise ValueError("Unrecognized turn phase '{game_state.turn_phase}'")
+
 def game_flow(num_players: int, choosers: List):
     game_state = initial_game_state(num_players)
 
     while not game_completed(game_state):
-        possible_choices = buy_phase_choices(game_state)
-
-        selected_choice_index = choosers[game_state.current_player_index](game_state, possible_choices)
-        selected_choice = possible_choices[selected_choice_index]
-        game_state = selected_choice.game_state
-        print(selected_choice.description)
-
-        game_state = do_cleanup_phase(game_state)
+        game_state = game_step(game_state, choosers)
 
     for i, player in enumerate(game_state.players):
         print(f"player {i} score: {total_player_vp(player)}")

@@ -29,13 +29,14 @@ class TestCards(unittest.TestCase):
             self.assertEqual(vp_total(card_counts), expected_vp_total)
 
     def test_game_state_equals(self):
-        game_state         = GameState(turn_phase=TURN_PHASES.ACTION,  supply=dict_to_card_counts({"province": 1}), current_player_index=0, players=[Player(hand=dict_to_card_counts({"copper": 1}), deck=dict_to_card_counts({"estate": 2}), discard_pile=dict_to_card_counts({"silver": 3}))])
-        different_cleanup  = GameState(turn_phase=TURN_PHASES.CLEANUP, supply=dict_to_card_counts({"province": 1}), current_player_index=0, players=[Player(hand=dict_to_card_counts({"copper": 1}), deck=dict_to_card_counts({"estate": 2}), discard_pile=dict_to_card_counts({"silver": 3}))])
-        different_supply   = GameState(turn_phase=TURN_PHASES.ACTION,  supply=dict_to_card_counts({"province": 9}), current_player_index=0, players=[Player(hand=dict_to_card_counts({"copper": 1}), deck=dict_to_card_counts({"estate": 2}), discard_pile=dict_to_card_counts({"silver": 3}))])
-        different_index    = GameState(turn_phase=TURN_PHASES.ACTION,  supply=dict_to_card_counts({"province": 1}), current_player_index=1, players=[Player(hand=dict_to_card_counts({"copper": 1}), deck=dict_to_card_counts({"estate": 2}), discard_pile=dict_to_card_counts({"silver": 3}))])
-        different_hand     = GameState(turn_phase=TURN_PHASES.ACTION,  supply=dict_to_card_counts({"province": 1}), current_player_index=0, players=[Player(hand=dict_to_card_counts({"copper": 9}), deck=dict_to_card_counts({"estate": 2}), discard_pile=dict_to_card_counts({"silver": 3}))])
-        different_deck     = GameState(turn_phase=TURN_PHASES.ACTION,  supply=dict_to_card_counts({"province": 1}), current_player_index=0, players=[Player(hand=dict_to_card_counts({"copper": 1}), deck=dict_to_card_counts({"estate": 9}), discard_pile=dict_to_card_counts({"silver": 3}))])
-        different_discard  = GameState(turn_phase=TURN_PHASES.ACTION,  supply=dict_to_card_counts({"province": 1}), current_player_index=0, players=[Player(hand=dict_to_card_counts({"copper": 1}), deck=dict_to_card_counts({"estate": 2}), discard_pile=dict_to_card_counts({"silver": 9}))])
+        game_state         = GameState(turn_phase=TURN_PHASES.ACTION,  supply=dict_to_card_counts({"province": 1}), pending_effects=(), current_player_index=0, players=[Player(hand=dict_to_card_counts({"copper": 1}), deck=dict_to_card_counts({"estate": 2}), discard_pile=dict_to_card_counts({"silver": 3}))])
+        different_cleanup  = GameState(turn_phase=TURN_PHASES.CLEANUP, supply=dict_to_card_counts({"province": 1}), pending_effects=(), current_player_index=0, players=[Player(hand=dict_to_card_counts({"copper": 1}), deck=dict_to_card_counts({"estate": 2}), discard_pile=dict_to_card_counts({"silver": 3}))])
+        different_supply   = GameState(turn_phase=TURN_PHASES.ACTION,  supply=dict_to_card_counts({"province": 9}), pending_effects=(), current_player_index=0, players=[Player(hand=dict_to_card_counts({"copper": 1}), deck=dict_to_card_counts({"estate": 2}), discard_pile=dict_to_card_counts({"silver": 3}))])
+        different_effects  = GameState(turn_phase=TURN_PHASES.ACTION,  supply=dict_to_card_counts({"province": 1}), pending_effects=(Effect(EFFECT_NAME.PRODUCE_MONEY, 1)), current_player_index=0, players=[Player(hand=dict_to_card_counts({"copper": 1}), deck=dict_to_card_counts({"estate": 2}), discard_pile=dict_to_card_counts({"silver": 3}))])
+        different_index    = GameState(turn_phase=TURN_PHASES.ACTION,  supply=dict_to_card_counts({"province": 1}), pending_effects=(), current_player_index=1, players=[Player(hand=dict_to_card_counts({"copper": 1}), deck=dict_to_card_counts({"estate": 2}), discard_pile=dict_to_card_counts({"silver": 3}))])
+        different_hand     = GameState(turn_phase=TURN_PHASES.ACTION,  supply=dict_to_card_counts({"province": 1}), pending_effects=(), current_player_index=0, players=[Player(hand=dict_to_card_counts({"copper": 9}), deck=dict_to_card_counts({"estate": 2}), discard_pile=dict_to_card_counts({"silver": 3}))])
+        different_deck     = GameState(turn_phase=TURN_PHASES.ACTION,  supply=dict_to_card_counts({"province": 1}), pending_effects=(), current_player_index=0, players=[Player(hand=dict_to_card_counts({"copper": 1}), deck=dict_to_card_counts({"estate": 9}), discard_pile=dict_to_card_counts({"silver": 3}))])
+        different_discard  = GameState(turn_phase=TURN_PHASES.ACTION,  supply=dict_to_card_counts({"province": 1}), pending_effects=(), current_player_index=0, players=[Player(hand=dict_to_card_counts({"copper": 1}), deck=dict_to_card_counts({"estate": 2}), discard_pile=dict_to_card_counts({"silver": 9}))])
 
         self.assertEqual(game_state, game_state)
         self.assertNotEqual(game_state, different_cleanup)
@@ -48,6 +49,7 @@ class TestCards(unittest.TestCase):
     def test_buy_phase_choices(self):
         buy_game_state = GameState(turn_phase=TURN_PHASES.BUY,
                                    supply=dict_to_card_counts({"copper": 1, "silver": 1, "gold": 1, "estate": 0, "duchy": 1, "province": 1}),
+                                   pending_effects=(),
                                    current_player_index=0,
                                    players=[Player(hand=dict_to_card_counts({"silver": 1, "gold": 1}),
                                                    deck=dict_to_card_counts({"copper": 1}),
@@ -92,6 +94,7 @@ class TestCards(unittest.TestCase):
 
     def do_cleanup_phase(self):
         game_state = GameState(turn_phase=TURN_PHASES.CLEANUP,
+                               pending_effects=(),
                                current_player_index=1,
                                players=[Player(hand=dict_to_card_counts({"copper": 5}),
                                                deck=dict_to_card_counts({"estate": 2}),
@@ -102,6 +105,7 @@ class TestCards(unittest.TestCase):
                                         ])
 
         game_state_after_cleanup = GameState(turn_phase=TURN_PHASES.ACTION,
+                                             pending_effects=(),
                                              current_player_index=0,
                                              players=[Player(hand=dict_to_card_counts({"estate": 2, "copper": 3}),
                                                              deck=dict_to_card_counts({"copper": 4}),
