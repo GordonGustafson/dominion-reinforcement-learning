@@ -8,6 +8,7 @@ from typing import NamedTuple, Tuple, List, Dict
 class EFFECT_NAME:
     DRAW_CARDS = "draw_cards"
     PRODUCE_MONEY = "produce_money"
+    PLUS_ACTIONS = "plus_actions"
     VP = "vp"
 
 Effect = NamedTuple("Effect", [
@@ -46,6 +47,7 @@ _GameStateBase = NamedTuple("GameState", [
     ("supply", CardCounts),
     # TODO: proper type annotation for this
     ("turn_phase", str),
+    ("actions", int),
     ("pending_effects", Tuple[Effect])
 ])
 
@@ -61,6 +63,15 @@ class GameState(_GameStateBase):
 
     def replace_current_player_kwargs(self, **kwargs):
         return self.replace_current_player(self.current_player()._replace(**kwargs))
+
+def make_game_state(
+        players,
+        current_player_index=0,
+        supply=Multiset(),
+        turn_phase=TURN_PHASES.ACTION,
+        actions=1,
+        pending_effects=()):
+    return GameState(players, current_player_index, supply, turn_phase, actions, pending_effects)
 
 Choice = NamedTuple("Choice", [
     ("game_state", GameState),
@@ -83,8 +94,8 @@ CARD_DEFS = {
     "smithy":    make_card(name="smithy",  cost=4, action_effects=(Effect(EFFECT_NAME.DRAW_CARDS, 3),)),
 
     # +actions
-    # {"name": "Laboratory",   "cost": 5, "type": "action", EFFECT_NAME.DRAW_CARDS: 2, "actions": 1,}
-    # {"name": "Village",      "cost": 3, "type": "action", EFFECT_NAME.DRAW_CARDS: 1, "actions": 2,}
+    "laboratory": make_card(name="laboratory", cost=5, action_effects=(Effect(EFFECT_NAME.DRAW_CARDS, 2), Effect(EFFECT_NAME.PLUS_ACTIONS, 1))),
+    "village":    make_card(name="village",    cost=3, action_effects=(Effect(EFFECT_NAME.DRAW_CARDS, 1), Effect(EFFECT_NAME.PLUS_ACTIONS, 2))),
 
     # trashing cards
     # {"name": "Chapel",       "cost": 2, "type": "action", "trash_up_to_X_cards_from_your_hand": 4,
@@ -218,14 +229,21 @@ def action_phase_choices(action_game_state: GameState) -> List[Choice]:
     player = action_game_state.current_player()
     buy_game_state = action_game_state._replace(turn_phase=TURN_PHASES.BUY)
 
-    play_nothing = Choice(game_state=buy_game_state, description="play no actions")
-    choices = [play_nothing]
+    move_to_buy_phase = Choice(game_state=buy_game_state, description="move to buy phase")
+    choices = [move_to_buy_phase]
+
+    assert action_game_state.actions >= 0
+    if action_game_state.actions == 0:
+        return choices
 
     playable_actions = [card for card in player.hand
                         if len(card.action_effects) > 0]
     for action in playable_actions:
-        pending_effects = buy_game_state.pending_effects + action.action_effects
-        game_state = buy_game_state._replace(pending_effects=pending_effects)
+        # The action effects from this card happen before any other pending
+        # effects, so we put them on the left
+        pending_effects = action.action_effects + action_game_state.pending_effects
+        game_state = action_game_state._replace(pending_effects=pending_effects,
+                                                actions=action_game_state.actions - 1)
         game_state = discard_specific_card_current_player(game_state, action)
 
         choices.append(Choice(game_state, f"play {action.name}"))
@@ -291,6 +309,8 @@ def resolve_pending_effect(game_state: GameState) -> GameState:
 
     if effect.name == EFFECT_NAME.DRAW_CARDS:
         return draw_cards_current_player(game_state, effect.value)
+    if effect.name == EFFECT_NAME.PLUS_ACTIONS:
+        return game_state._replace(actions=game_state.actions + effect.value)
     else:
         raise ValueError("resolve_pending_effect does not support effect named '{effec.name}'")
 
@@ -314,7 +334,8 @@ def do_cleanup_phase(game_state: GameState) -> GameState:
         index = index % num_players
     game_state = game_state._replace(current_player_index=index)
 
-    game_state = game_state._replace(turn_phase=TURN_PHASES.ACTION)
+    # Next player gets 1 action
+    game_state = game_state._replace(turn_phase=TURN_PHASES.ACTION, actions=1)
 
     return game_state
 
@@ -373,12 +394,15 @@ def initial_supply_base_cards(num_players: int) -> Dict[str, int]:
 def initial_supply(num_players: int) -> Dict[str, int]:
     card_dict = initial_supply_base_cards(num_players)
     card_dict["smithy"] = 10
+    card_dict["village"] = 10
+    card_dict["laboratory"] = 10
     return card_dict
 
 def initial_game_state(num_players: int) -> GameState:
     return GameState(players=[initial_player_state() for _ in range(num_players)],
                      current_player_index=0,
                      pending_effects=(),
+                     actions=1,
                      supply=dict_to_card_counts(initial_supply(num_players)),
                      turn_phase=TURN_PHASES.ACTION)
 
@@ -432,7 +456,7 @@ def game_flow(num_players: int, choosers: List):
 
 
 def user_chooser(game_state: GameState, choices: List[Choice]) -> int:
-    print(f"hand: {card_counts_to_dict(game_state.current_player().hand)}")
+    print(f"actions: {game_state.actions}, hand: {card_counts_to_dict(game_state.current_player().hand)}")
     for i, choice in enumerate(choices):
         print(f"{i}: {choice.description}")
 
