@@ -48,6 +48,7 @@ class TURN_PHASES:
 _GameStateBase = NamedTuple("GameState", [
     ("players", List[Player]),
     ("current_player_index", int),
+    ("max_turns_per_player", int),
     ("supply", CardCounts),
     # TODO: proper type annotation for this
     ("turn_phase", str),
@@ -71,11 +72,13 @@ class GameState(_GameStateBase):
 def make_game_state(
         players,
         current_player_index=0,
+        max_turns_per_player=0,
+        round=0,
         supply=Multiset(),
         turn_phase=TURN_PHASES.ACTION,
         actions=1,
         pending_effects=()):
-    return GameState(players, current_player_index, supply, turn_phase, actions, pending_effects)
+    return GameState(players, current_player_index, max_turns_per_player, supply, turn_phase, actions, pending_effects)
 
 Choice = NamedTuple("Choice", [
     ("game_state", GameState),
@@ -183,7 +186,6 @@ def treasure_total(card_counts: CardCounts) -> int:
 
     return total
 
-
 def vp_total(card_counts: CardCounts) -> int:
     total = 0
     for card, card_occurrences in card_counts.items():
@@ -195,6 +197,11 @@ def vp_total(card_counts: CardCounts) -> int:
 
 def total_player_vp(player: Player) -> int:
     return vp_total(player.hand) + vp_total(player.deck) + vp_total(player.discard_pile)
+
+def average_treasure_value_per_card(player: Player) -> float:
+    player_treasure_total = treasure_total(player.hand) + treasure_total(player.deck) + treasure_total(player.discard_pile)
+    player_card_total = num_cards(player.hand) + num_cards(player.deck) + num_cards(player.discard_pile)
+    return player_treasure_total / player_card_total
 
 ################################################################################
 #                                                  Operations Using Card Names #
@@ -386,6 +393,7 @@ def do_cleanup_phase(game_state: GameState) -> GameState:
     index = game_state.current_player_index + 1
     num_players = len(game_state.players)
     if index >= num_players:
+        game_state = game_state._replace(max_turns_per_player=game_state.max_turns_per_player+1)
         index = index % num_players
     game_state = game_state._replace(current_player_index=index)
 
@@ -459,6 +467,7 @@ def initial_supply(num_players: int) -> Dict[str, int]:
 def initial_game_state(num_players: int) -> GameState:
     return GameState(players=[initial_player_state() for _ in range(num_players)],
                      current_player_index=0,
+                     max_turns_per_player=0,
                      pending_effects=(),
                      actions=1,
                      supply=dict_to_card_counts(initial_supply(num_players)),
@@ -512,15 +521,4 @@ def game_flow(num_players: int, choosers: List):
     for i, player in enumerate(game_state.players):
         print(f"player {i} score: {total_player_vp(player)}")
 
-
-def user_chooser(game_state: GameState, choices: List[Choice]) -> int:
-    print(f"actions: {game_state.actions}, hand: {card_counts_to_dict(game_state.current_player().hand)}")
-    for i, choice in enumerate(choices):
-        print(f"{i}: {choice.description}")
-
-    selected_choice = input()
-    while selected_choice == '' or int(selected_choice) >= len(choices) or int(selected_choice) < 0:
-        print("index out of bounds, try again")
-        selected_choice = input()
-
-    return int(selected_choice)
+    print(f"max turns per player: {game_state.max_turns_per_player}")
