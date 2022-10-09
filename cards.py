@@ -37,7 +37,14 @@ Player = NamedTuple("Player", [
     ("hand", CardCounts),
     ("deck", CardCounts),
     ("discard_pile", CardCounts),
+    ("name", str),
 ])
+
+def make_player(hand=Multiset(),
+                deck=Multiset(),
+                discard_pile=Multiset(),
+                name="unnamed player"):
+    return Player(hand, deck, discard_pile, name)
 
 # TODO: make this a proper Python enum
 class TURN_PHASES:
@@ -406,8 +413,9 @@ def do_cleanup_phase(game_state: GameState) -> GameState:
 #                                                              Starting a Game #
 ################################################################################
 
-def initial_player_state() -> Player:
-    player = Player(hand=dict_to_card_counts({}),
+def initial_player_state(name: str) -> Player:
+    player = Player(name=name,
+                    hand=dict_to_card_counts({}),
                     deck=dict_to_card_counts({"estate": 3, "copper": 7}),
                     discard_pile=dict_to_card_counts({}))
 
@@ -464,8 +472,9 @@ def initial_supply(num_players: int) -> Dict[str, int]:
     card_dict["remodel"] = 10
     return card_dict
 
-def initial_game_state(num_players: int) -> GameState:
-    return GameState(players=[initial_player_state() for _ in range(num_players)],
+def initial_game_state(player_names: List[str]) -> GameState:
+    num_players = len(player_names)
+    return GameState(players=[initial_player_state(name) for name in player_names],
                      current_player_index=0,
                      max_turns_per_player=0,
                      pending_effects=(),
@@ -487,13 +496,15 @@ def game_completed(game_state: GameState) -> bool:
             or num_copies_of_card(game_state.supply, "province") == 0)
 
 def offer_choice(game_state, choices, chooser) -> GameState:
+    # ASSUMPTION: the choice is being made by the current player
+    current_player_name = game_state.current_player().name
     if len(choices) == 1:
         return choices[0].game_state
 
     # Keeping game_state as an argument, even though it may not be needed by value function approximation
     selected_choice_index = chooser(game_state, choices)
     selected_choice = choices[selected_choice_index]
-    print(selected_choice.description)
+    print(f"{current_player_name}: {selected_choice.description}")
     return selected_choice.game_state
 
 def game_step(game_state: GameState, choosers: List) -> GameState:
@@ -512,13 +523,14 @@ def game_step(game_state: GameState, choosers: List) -> GameState:
     else:
         raise ValueError("Unrecognized turn phase '{game_state.turn_phase}'")
 
-def game_flow(num_players: int, choosers: List):
-    game_state = initial_game_state(num_players)
+def game_flow(player_names: List[str], choosers: List):
+    game_state = initial_game_state(player_names)
 
     while not game_completed(game_state):
         game_state = game_step(game_state, choosers)
 
+    print("----------------------------")
     for i, player in enumerate(game_state.players):
-        print(f"player {i} score: {total_player_vp(player)}")
+        print(f"{player.name} score: {total_player_vp(player)}")
 
     print(f"max turns per player: {game_state.max_turns_per_player}")
