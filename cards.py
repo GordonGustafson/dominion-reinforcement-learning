@@ -10,6 +10,7 @@ class EFFECT_NAME:
     PLUS_ACTIONS = "plus_actions"
     TRASH_A_CARD_FROM_YOUR_HAND = "trash_a_card_from_your_hand"
     GAIN_A_CARD_COSTING_UP_TO = "gain_a_card_costing_up_to"
+    TRASH_GAIN_A_CARD_COSTING_UP_TO_X_MORE = "trash_gain_a_card_costing_up_to_x_more"
 
     PRODUCE_MONEY = "produce_money"
     VP = "vp"
@@ -108,7 +109,7 @@ CARD_DEFS = {
 
     # gaining cards
     "workshop":  make_card(name="workshop", cost=3, action_effects=(Effect(EFFECT_NAME.GAIN_A_CARD_COSTING_UP_TO, 4),)),
-    # {"name": "Remodel",      "cost": 4, "type": "action", @"trash a card from your hand. gain a card costing up to 2 more than it"
+    "remodel":   make_card(name="remodel",  cost=4, action_effects=(Effect(EFFECT_NAME.TRASH_GAIN_A_CARD_COSTING_UP_TO_X_MORE, 2),)),
     # {"name": "Mine",         "cost": 5, "type": "action", @"you may trash a treasure from your hand. gain a treasure to your hand costing up to $3 more than it"
 
     # +buys
@@ -342,9 +343,28 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
     elif effect.name == EFFECT_NAME.GAIN_A_CARD_COSTING_UP_TO:
         gainable_cards = cards_in_supply_costing_less_than(game_state, effect.value)
         if len(gainable_cards) == 0:
-            return [Choice(game_state=game_state,
-                           description=f"gain nothing since no cards in supply cost {effect.value} or less")]
+            # Is the single choice here helpful for logging when these edge cases happen?
+            # Can rethink this in the future.
+            single_choice = [Choice(game_state=game_state,
+                                    description=f"gain nothing since no cards in supply cost {effect.value} or less")]
+            return offer_choice(game_state, single_choice, current_player_chooser)
         choices = gainable_cards_to_choices(game_state, gainable_cards, "gain")
+        return offer_choice(game_state, choices, current_player_chooser)
+    elif effect.name == EFFECT_NAME.TRASH_GAIN_A_CARD_COSTING_UP_TO_X_MORE:
+        hand = game_state.current_player().hand
+        if len(hand) == 0:
+            single_choice = [Choice(game_state=game_state,
+                                    description=f"trash and gain nothing since there are no cards in your hand")]
+            return offer_choice(game_state, single_choice, current_player_chooser)
+
+        choices = []
+        for card in hand:
+            gain_effect = Effect(EFFECT_NAME.GAIN_A_CARD_COSTING_UP_TO, card.cost + effect.value)
+            new_pending_effects = (gain_effect,) + game_state.pending_effects
+            new_game_state = game_state.replace_current_player_kwargs(hand=remove_card(hand, card))
+            new_game_state = new_game_state._replace(pending_effects=new_pending_effects)
+            choices.append(Choice(game_state=new_game_state,
+                                  description=f"trash {card.name}"))
         return offer_choice(game_state, choices, current_player_chooser)
     else:
         raise ValueError("resolve_pending_effect does not support effect named '{effec.name}'")
@@ -433,6 +453,7 @@ def initial_supply(num_players: int) -> Dict[str, int]:
     card_dict["laboratory"] = 10
     card_dict["chapel"] = 10
     card_dict["workshop"] = 10
+    card_dict["remodel"] = 10
     return card_dict
 
 def initial_game_state(num_players: int) -> GameState:
