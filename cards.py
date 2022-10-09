@@ -7,9 +7,11 @@ from typing import NamedTuple, Tuple, List, Dict
 # TODO: make this a proper Python enum
 class EFFECT_NAME:
     DRAW_CARDS = "draw_cards"
-    PRODUCE_MONEY = "produce_money"
     PLUS_ACTIONS = "plus_actions"
     TRASH_A_CARD_FROM_YOUR_HAND = "trash_a_card_from_your_hand"
+    GAIN_A_CARD_COSTING_UP_TO = "gain_a_card_costing_up_to"
+
+    PRODUCE_MONEY = "produce_money"
     VP = "vp"
 
 Effect = NamedTuple("Effect", [
@@ -105,7 +107,7 @@ CARD_DEFS = {
                                                                        Effect(EFFECT_NAME.TRASH_A_CARD_FROM_YOUR_HAND, 1))),
 
     # gaining cards
-    # {"name": "Workshop",     "cost": 3, "type": "action", @"gain_a_card_costing_up_to_4": 1
+    "workshop":  make_card(name="workshop", cost=3, action_effects=(Effect(EFFECT_NAME.GAIN_A_CARD_COSTING_UP_TO, 4),)),
     # {"name": "Remodel",      "cost": 4, "type": "action", @"trash a card from your hand. gain a card costing up to 2 more than it"
     # {"name": "Mine",         "cost": 5, "type": "action", @"you may trash a treasure from your hand. gain a treasure to your hand costing up to $3 more than it"
 
@@ -258,23 +260,13 @@ def buy_phase_choices(buy_game_state: GameState) -> List[Choice]:
     player = buy_game_state.current_player()
     total_money_for_turn = treasure_total(player.hand)
 
-    supply = buy_game_state.supply
-    buyable_cards = [card for card in supply.distinct_elements()
-                     if supply[card] > 0
-                     and card.cost <= total_money_for_turn]
+    buyable_cards = cards_in_supply_costing_less_than(buy_game_state, total_money_for_turn)
 
     cleanup_game_state = buy_game_state._replace(turn_phase=TURN_PHASES.CLEANUP)
     buy_nothing = Choice(game_state=cleanup_game_state, description="buy nothing")
-    choices = [buy_nothing]
-    for buyable_card in buyable_cards:
-        game_state = (cleanup_game_state
-                      ._replace(supply=remove_card(supply, buyable_card))
-                      .replace_current_player_kwargs(discard_pile=add_card(player.discard_pile,
-                                                                           buyable_card)))
+    buy_choices = gainable_cards_to_choices(cleanup_game_state, buyable_cards, "buy")
 
-        choices.append(Choice(game_state, f"buy {buyable_card.name}"))
-
-    return choices
+    return [buy_nothing] + buy_choices
 
 def draw_card(player: Player) -> Player:
     if num_cards(player.deck) == 0 and num_cards(player.discard_pile) == 0:
@@ -307,9 +299,27 @@ def draw_cards_current_player(game_state: GameState, num_cards_to_draw: int) -> 
 
 def gain_card_current_player(game_state: GameState, card: Card) -> GameState:
     return (game_state
-            ._replace(supply=remove_card(supply, card))
-            .replace_current_player_kwargs(discard_pile=add_card(player.discard_pile,
+            ._replace(supply=remove_card(game_state.supply, card))
+            .replace_current_player_kwargs(discard_pile=add_card(game_state.current_player().discard_pile,
                                                                  card)))
+
+def cards_in_supply_costing_less_than(game_state, max_cost) -> List[Card]:
+    supply = game_state.supply
+    # The > 0 check is likely not needed now that we're using a Multiset
+    return [card for card in supply.distinct_elements()
+            if supply[card] > 0
+            and card.cost <= max_cost]
+
+def gainable_cards_to_choices(game_state: GameState,
+                              gainable_cards: List[Card],
+                              description_prefix: str) -> List[Choice]:
+    """
+    Returns empty list if gainable_cards is empty
+    """
+    return [Choice(gain_card_current_player(game_state, card),
+                   f"{description_prefix} {card.name}")
+            for card in gainable_cards]
+
 def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
     effect = game_state.pending_effects[0]
     remaining_effects = game_state.pending_effects[1:]
@@ -318,9 +328,9 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
 
     if effect.name == EFFECT_NAME.DRAW_CARDS:
         return draw_cards_current_player(game_state, effect.value)
-    if effect.name == EFFECT_NAME.PLUS_ACTIONS:
+    elif effect.name == EFFECT_NAME.PLUS_ACTIONS:
         return game_state._replace(actions=game_state.actions + effect.value)
-    if effect.name == EFFECT_NAME.TRASH_A_CARD_FROM_YOUR_HAND:
+    elif effect.name == EFFECT_NAME.TRASH_A_CARD_FROM_YOUR_HAND:
         trash_nothing = Choice(game_state=game_state, description="trash nothing")
         choices = [trash_nothing]
         hand = game_state.current_player().hand
@@ -328,6 +338,13 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
             after_trashing_card = game_state.replace_current_player_kwargs(hand=remove_card(hand, card))
             choices.append(Choice(game_state=after_trashing_card,
                                   description=f"trash {card.name}"))
+        return offer_choice(game_state, choices, current_player_chooser)
+    elif effect.name == EFFECT_NAME.GAIN_A_CARD_COSTING_UP_TO:
+        gainable_cards = cards_in_supply_costing_less_than(game_state, effect.value)
+        if len(gainable_cards) == 0:
+            return [Choice(game_state=game_state,
+                           description=f"gain nothing since no cards in supply cost {effect.value} or less")]
+        choices = gainable_cards_to_choices(game_state, gainable_cards, "gain")
         return offer_choice(game_state, choices, current_player_chooser)
     else:
         raise ValueError("resolve_pending_effect does not support effect named '{effec.name}'")
@@ -415,6 +432,7 @@ def initial_supply(num_players: int) -> Dict[str, int]:
     card_dict["village"] = 10
     card_dict["laboratory"] = 10
     card_dict["chapel"] = 10
+    card_dict["workshop"] = 10
     return card_dict
 
 def initial_game_state(num_players: int) -> GameState:
