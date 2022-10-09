@@ -9,6 +9,7 @@ class EFFECT_NAME:
     DRAW_CARDS = "draw_cards"
     PRODUCE_MONEY = "produce_money"
     PLUS_ACTIONS = "plus_actions"
+    TRASH_A_CARD_FROM_YOUR_HAND = "trash_a_card_from_your_hand"
     VP = "vp"
 
 Effect = NamedTuple("Effect", [
@@ -98,7 +99,10 @@ CARD_DEFS = {
     "village":    make_card(name="village",    cost=3, action_effects=(Effect(EFFECT_NAME.DRAW_CARDS, 1), Effect(EFFECT_NAME.PLUS_ACTIONS, 2))),
 
     # trashing cards
-    # {"name": "Chapel",       "cost": 2, "type": "action", "trash_up_to_X_cards_from_your_hand": 4,
+    "chapel":     make_card(name="chapel",     cost=2, action_effects=(Effect(EFFECT_NAME.TRASH_A_CARD_FROM_YOUR_HAND, 1),
+                                                                       Effect(EFFECT_NAME.TRASH_A_CARD_FROM_YOUR_HAND, 1),
+                                                                       Effect(EFFECT_NAME.TRASH_A_CARD_FROM_YOUR_HAND, 1),
+                                                                       Effect(EFFECT_NAME.TRASH_A_CARD_FROM_YOUR_HAND, 1))),
 
     # gaining cards
     # {"name": "Workshop",     "cost": 3, "type": "action", @"gain_a_card_costing_up_to_4": 1
@@ -302,15 +306,25 @@ def draw_cards_current_player(game_state: GameState, num_cards_to_draw: int) -> 
         player = draw_card(player)
     return game_state.replace_current_player(player)
 
-def resolve_pending_effect(game_state: GameState) -> GameState:
+def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
     effect = game_state.pending_effects[0]
     remaining_effects = game_state.pending_effects[1:]
     game_state = game_state._replace(pending_effects=remaining_effects)
+    current_player_chooser = choosers[game_state.current_player_index]
 
     if effect.name == EFFECT_NAME.DRAW_CARDS:
         return draw_cards_current_player(game_state, effect.value)
     if effect.name == EFFECT_NAME.PLUS_ACTIONS:
         return game_state._replace(actions=game_state.actions + effect.value)
+    if effect.name == EFFECT_NAME.TRASH_A_CARD_FROM_YOUR_HAND:
+        trash_nothing = Choice(game_state=game_state, description="trash nothing")
+        choices = [trash_nothing]
+        hand = game_state.current_player().hand
+        for card in hand:
+            after_trashing_card = game_state.replace_current_player_kwargs(hand=remove_card(hand, card))
+            choices.append(Choice(game_state=after_trashing_card,
+                                  description=f"trash {card.name}"))
+        return offer_choice(game_state, choices, current_player_chooser)
     else:
         raise ValueError("resolve_pending_effect does not support effect named '{effec.name}'")
 
@@ -396,6 +410,7 @@ def initial_supply(num_players: int) -> Dict[str, int]:
     card_dict["smithy"] = 10
     card_dict["village"] = 10
     card_dict["laboratory"] = 10
+    card_dict["chapel"] = 10
     return card_dict
 
 def initial_game_state(num_players: int) -> GameState:
@@ -433,7 +448,7 @@ def game_step(game_state: GameState, choosers: List) -> GameState:
     current_player_chooser = choosers[game_state.current_player_index]
 
     if len(game_state.pending_effects) > 0:
-        return resolve_pending_effect(game_state)
+        return resolve_pending_effect(game_state, choosers)
     elif game_state.turn_phase == TURN_PHASES.ACTION:
         choices = action_phase_choices(game_state)
         return offer_choice(game_state, choices, current_player_chooser)
