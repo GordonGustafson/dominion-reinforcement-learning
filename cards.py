@@ -10,7 +10,9 @@ class EFFECT_NAME:
     PLUS_ACTIONS = "plus_actions"
     TRASH_A_CARD_FROM_YOUR_HAND = "trash_a_card_from_your_hand"
     GAIN_A_CARD_COSTING_UP_TO = "gain_a_card_costing_up_to"
+    GAIN_A_TREASURE_TO_HAND_COSTING_UP_TO = "gain_a_treasure_to_hand_costing_up_to"
     TRASH_GAIN_A_CARD_COSTING_UP_TO_X_MORE = "trash_gain_a_card_costing_up_to_x_more"
+    MAY_TRASH_TREASURE_GAIN_TREASURE_TO_HAND_COSTING_UP_TO_X_MORE = "may_trash_treasure_gain_treasure_to_hand_costing_up_to_x_more"
 
     PRODUCE_MONEY = "produce_money"
     VP = "vp"
@@ -120,7 +122,7 @@ CARD_DEFS = {
     # gaining cards
     "workshop":  make_card(name="workshop", cost=3, action_effects=(Effect(EFFECT_NAME.GAIN_A_CARD_COSTING_UP_TO, 4),)),
     "remodel":   make_card(name="remodel",  cost=4, action_effects=(Effect(EFFECT_NAME.TRASH_GAIN_A_CARD_COSTING_UP_TO_X_MORE, 2),)),
-    # {"name": "Mine",         "cost": 5, "type": "action", @"you may trash a treasure from your hand. gain a treasure to your hand costing up to $3 more than it"
+    "mine":      make_card(name="mine",     cost=5, action_effects=(Effect(EFFECT_NAME.MAY_TRASH_TREASURE_GAIN_TREASURE_TO_HAND_COSTING_UP_TO_X_MORE, 3),)),
 
     # +buys
     # {"name": "Festival",     "cost": 5, "type": "action", "actions": 2, @", +1 buy, +2$"
@@ -183,6 +185,9 @@ def remove_card(card_counts: CardCounts, card: Card) -> CardCounts:
 
 def add_card_counts(card_counts_lhs: CardCounts, card_counts_rhs: CardCounts) -> CardCounts:
     return card_counts_lhs + card_counts_rhs
+
+def is_treasure(card: Card) -> bool:
+    return len(card.treasure_effects) > 0
 
 def treasure_total(card_counts: CardCounts) -> int:
     total = 0
@@ -318,6 +323,12 @@ def gain_card_current_player(game_state: GameState, card: Card) -> GameState:
             .replace_current_player_kwargs(discard_pile=add_card(game_state.current_player().discard_pile,
                                                                  card)))
 
+def gain_card_to_hand_current_player(game_state: GameState, card: Card) -> GameState:
+    return (game_state
+            ._replace(supply=remove_card(game_state.supply, card))
+            .replace_current_player_kwargs(hand=add_card(game_state.current_player().hand,
+                                                         card)))
+
 def cards_in_supply_costing_less_than(game_state, max_cost) -> List[Card]:
     supply = game_state.supply
     # The > 0 check is likely not needed now that we're using a Multiset
@@ -333,6 +344,13 @@ def gainable_cards_to_choices(game_state: GameState,
     """
     return [Choice(gain_card_current_player(game_state, card),
                    f"{description_prefix} {card.name}")
+            for card in gainable_cards]
+
+def gainable_cards_to_hand_to_choices(game_state: GameState,
+                                      gainable_cards: List[Card],
+                                      description_prefix: str) -> List[Choice]:
+    return [Choice(gain_card_to_hand_current_player(game_state, card),
+                   f"{description_prefix} {card.name} to hand")
             for card in gainable_cards]
 
 def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
@@ -364,11 +382,21 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
             return offer_choice(game_state, single_choice, current_player_chooser)
         choices = gainable_cards_to_choices(game_state, gainable_cards, "gain")
         return offer_choice(game_state, choices, current_player_chooser)
+    elif effect.name == EFFECT_NAME.GAIN_A_TREASURE_TO_HAND_COSTING_UP_TO:
+        gainable_cards = [card for card
+                          in cards_in_supply_costing_less_than(game_state, effect.value)
+                          if is_treasure(card)]
+        if len(gainable_cards) == 0:
+            single_choice = [Choice(game_state=game_state,
+                                    description=f"gain nothing since no treasures in supply cost {effect.value} or less")]
+            return offer_choice(game_state, single_choice, current_player_chooser)
+        choices = gainable_cards_to_hand_to_choices(game_state, gainable_cards, "gain")
+        return offer_choice(game_state, choices, current_player_chooser)
     elif effect.name == EFFECT_NAME.TRASH_GAIN_A_CARD_COSTING_UP_TO_X_MORE:
         hand = game_state.current_player().hand
         if len(hand) == 0:
             single_choice = [Choice(game_state=game_state,
-                                    description=f"trash and gain nothing since there are no cards in your hand")]
+                                    description="trash and gain nothing since there are no cards in your hand")]
             return offer_choice(game_state, single_choice, current_player_chooser)
 
         choices = []
@@ -380,6 +408,19 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
             choices.append(Choice(game_state=new_game_state,
                                   description=f"trash {card.name}"))
         return offer_choice(game_state, choices, current_player_chooser)
+    elif effect.name == EFFECT_NAME.MAY_TRASH_TREASURE_GAIN_TREASURE_TO_HAND_COSTING_UP_TO_X_MORE:
+        hand = game_state.current_player().hand
+        choices = [Choice(game_state=game_state, description="trash nothing")]
+
+        for card in (c for c in hand if is_treasure(c)):
+            gain_effect = Effect(EFFECT_NAME.GAIN_A_TREASURE_TO_HAND_COSTING_UP_TO, card.cost + effect.value)
+            new_pending_effects = (gain_effect,) + game_state.pending_effects
+            new_game_state = game_state.replace_current_player_kwargs(hand=remove_card(hand, card))
+            new_game_state = new_game_state._replace(pending_effects=new_pending_effects)
+            choices.append(Choice(game_state=new_game_state,
+                                  description=f"trash {card.name}"))
+        return offer_choice(game_state, choices, current_player_chooser)
+
     else:
         raise ValueError("resolve_pending_effect does not support effect named '{effec.name}'")
 
@@ -470,6 +511,7 @@ def initial_supply(num_players: int) -> Dict[str, int]:
     card_dict["chapel"] = 10
     card_dict["workshop"] = 10
     card_dict["remodel"] = 10
+    card_dict["mine"] = 10
     return card_dict
 
 def initial_game_state(player_names: List[str]) -> GameState:
@@ -499,6 +541,7 @@ def offer_choice(game_state, choices, chooser) -> GameState:
     # ASSUMPTION: the choice is being made by the current player
     current_player_name = game_state.current_player().name
     if len(choices) == 1:
+        print(f"{current_player_name}: {choices[0].description}")
         return choices[0].game_state
 
     # Keeping game_state as an argument, even though it may not be needed by value function approximation

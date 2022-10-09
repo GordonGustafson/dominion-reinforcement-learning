@@ -8,4 +8,4 @@ def start_game(choosers: List):
 
 if __name__ == '__main__':
     start_game([strategies.big_money_until_province_then_all_victory,
-                strategies.big_money_provinces_only])
+                strategies.user_chooser])
