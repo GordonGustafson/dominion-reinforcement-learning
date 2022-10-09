@@ -168,12 +168,8 @@ def remove_card(card_counts: CardCounts, card: Card) -> CardCounts:
     card_counts_copy[card] -= 1
     return card_counts_copy
 
-def dict_to_card_counts(card_names_dict: Dict[str, int]) -> CardCounts:
-    result = empty_card_counts()
-    for card_name, card_occurrences in card_names_dict.items():
-        result[CARD_DEFS[card_name]] = card_occurrences
-    return result
-
+def add_card_counts(card_counts_lhs: CardCounts, card_counts_rhs: CardCounts) -> CardCounts:
+    return card_counts_lhs + card_counts_rhs
 
 def treasure_total(card_counts: CardCounts) -> int:
     total = 0
@@ -194,12 +190,8 @@ def vp_total(card_counts: CardCounts) -> int:
 
     return total
 
-def add_card_counts(card_counts_lhs: CardCounts, card_counts_rhs: CardCounts) -> CardCounts:
-    return card_counts_lhs + card_counts_rhs
-
 def total_player_vp(player: Player) -> int:
     return vp_total(player.hand) + vp_total(player.deck) + vp_total(player.discard_pile)
-
 
 ################################################################################
 #                                                  Operations Using Card Names #
@@ -224,6 +216,13 @@ def card_counts_to_dict(card_counts: CardCounts) -> Dict[str, int]:
     return {card.name: num_occurrences
             for card, num_occurrences in card_counts.items()
             if num_occurrences > 0}
+
+def dict_to_card_counts(card_names_dict: Dict[str, int]) -> CardCounts:
+    result = empty_card_counts()
+    for card_name, card_occurrences in card_names_dict.items():
+        result[card_name_to_card(card_name)] = card_occurrences
+    return result
+
 
 ################################################################################
 #                                                                      Choices #
@@ -306,6 +305,11 @@ def draw_cards_current_player(game_state: GameState, num_cards_to_draw: int) -> 
         player = draw_card(player)
     return game_state.replace_current_player(player)
 
+def gain_card_current_player(game_state: GameState, card: Card) -> GameState:
+    return (game_state
+            ._replace(supply=remove_card(supply, card))
+            .replace_current_player_kwargs(discard_pile=add_card(player.discard_pile,
+                                                                 card)))
 def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
     effect = game_state.pending_effects[0]
     remaining_effects = game_state.pending_effects[1:]
