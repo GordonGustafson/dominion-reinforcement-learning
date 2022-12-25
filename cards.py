@@ -9,7 +9,7 @@ class EFFECT_NAME:
     DRAW_CARDS = "draw_cards"
     PLUS_ACTIONS = "plus_actions"
     PLUS_BUYS = "plus_buys"
-    TRASH_A_CARD_FROM_YOUR_HAND = "trash_a_card_from_your_hand"
+    MAY_TRASH_A_CARD_FROM_YOUR_HAND = "may_trash_a_card_from_your_hand"
     GAIN_A_CARD_COSTING_UP_TO = "gain_a_card_costing_up_to"
     GAIN_A_TREASURE_TO_HAND_COSTING_UP_TO = "gain_a_treasure_to_hand_costing_up_to"
     TRASH_GAIN_A_CARD_COSTING_UP_TO_X_MORE = "trash_gain_a_card_costing_up_to_x_more"
@@ -121,10 +121,10 @@ CARD_DEFS = {
     "village":    make_card(name="village",    cost=3, action_effects=(Effect(EFFECT_NAME.DRAW_CARDS, 1), Effect(EFFECT_NAME.PLUS_ACTIONS, 2))),
 
     # trashing cards
-    "chapel":     make_card(name="chapel",     cost=2, action_effects=(Effect(EFFECT_NAME.TRASH_A_CARD_FROM_YOUR_HAND, 1),
-                                                                       Effect(EFFECT_NAME.TRASH_A_CARD_FROM_YOUR_HAND, 1),
-                                                                       Effect(EFFECT_NAME.TRASH_A_CARD_FROM_YOUR_HAND, 1),
-                                                                       Effect(EFFECT_NAME.TRASH_A_CARD_FROM_YOUR_HAND, 1))),
+    "chapel":     make_card(name="chapel",     cost=2, action_effects=(Effect(EFFECT_NAME.MAY_TRASH_A_CARD_FROM_YOUR_HAND, None),
+                                                                       Effect(EFFECT_NAME.MAY_TRASH_A_CARD_FROM_YOUR_HAND, None),
+                                                                       Effect(EFFECT_NAME.MAY_TRASH_A_CARD_FROM_YOUR_HAND, None),
+                                                                       Effect(EFFECT_NAME.MAY_TRASH_A_CARD_FROM_YOUR_HAND, None))),
 
     # gaining cards
     "workshop":  make_card(name="workshop", cost=3, action_effects=(Effect(EFFECT_NAME.GAIN_A_CARD_COSTING_UP_TO, 4),)),
@@ -400,7 +400,7 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
         return game_state._replace(total_money=game_state.total_money + effect.value)
     elif effect.name == EFFECT_NAME.PLUS_BUYS:
         return game_state._replace(buys=game_state.buys + effect.value)
-    elif effect.name == EFFECT_NAME.TRASH_A_CARD_FROM_YOUR_HAND:
+    elif effect.name == EFFECT_NAME.MAY_TRASH_A_CARD_FROM_YOUR_HAND:
         trash_nothing = Choice(game_state=game_state, description="trash nothing")
         choices = [trash_nothing]
         hand = game_state.current_player().hand
