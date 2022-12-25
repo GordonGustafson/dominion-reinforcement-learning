@@ -8,6 +8,7 @@ from typing import NamedTuple, Tuple, List, Dict
 class EFFECT_NAME:
     DRAW_CARDS = "draw_cards"
     PLUS_ACTIONS = "plus_actions"
+    PLUS_BUYS = "plus_buys"
     TRASH_A_CARD_FROM_YOUR_HAND = "trash_a_card_from_your_hand"
     GAIN_A_CARD_COSTING_UP_TO = "gain_a_card_costing_up_to"
     GAIN_A_TREASURE_TO_HAND_COSTING_UP_TO = "gain_a_treasure_to_hand_costing_up_to"
@@ -51,6 +52,7 @@ def make_player(hand=Multiset(),
 # TODO: make this a proper Python enum
 class TURN_PHASES:
     ACTION = "ACTION"
+    TREASURE = "TREASURE"
     BUY = "BUY"
     CLEANUP = "CLEANUP"
 
@@ -62,6 +64,8 @@ _GameStateBase = NamedTuple("GameState", [
     # TODO: proper type annotation for this
     ("turn_phase", str),
     ("actions", int),
+    ("buys", int),
+    ("total_money", int),
     ("pending_effects", Tuple[Effect])
 ])
 
@@ -86,8 +90,11 @@ def make_game_state(
         supply=Multiset(),
         turn_phase=TURN_PHASES.ACTION,
         actions=1,
+        buys=1,
+        total_money=0,
         pending_effects=()):
-    return GameState(players, current_player_index, max_turns_per_player, supply, turn_phase, actions, pending_effects)
+    return GameState(players, current_player_index, max_turns_per_player, supply, turn_phase,
+                     actions, buys, total_money, pending_effects)
 
 Choice = NamedTuple("Choice", [
     ("game_state", GameState),
@@ -125,8 +132,13 @@ CARD_DEFS = {
     "mine":      make_card(name="mine",     cost=5, action_effects=(Effect(EFFECT_NAME.MAY_TRASH_TREASURE_GAIN_TREASURE_TO_HAND_COSTING_UP_TO_X_MORE, 3),)),
 
     # +buys
-    # {"name": "Festival",     "cost": 5, "type": "action", "actions": 2, @", +1 buy, +2$"
-    # {"name": "Market",       "cost": 5, "type": "action", EFFECT_NAME.DRAW_CARDS: 1, "actions": 1, @"+1$ +1 buy"
+    "festival":  make_card(name="festival", cost=5, action_effects=(Effect(EFFECT_NAME.PLUS_ACTIONS, 2),
+                                                                    Effect(EFFECT_NAME.PLUS_BUYS, 1),
+                                                                    Effect(EFFECT_NAME.PRODUCE_MONEY, 2))),
+    "market":    make_card(name="market", cost=5, action_effects=(Effect(EFFECT_NAME.PLUS_ACTIONS, 1),
+                                                                  Effect(EFFECT_NAME.PLUS_BUYS, 1),
+                                                                  Effect(EFFECT_NAME.PRODUCE_MONEY, 1, ),
+                                                                  Effect(EFFECT_NAME.DRAW_CARDS, 1))),
     # {"name": "Council Room", "cost": 5, "type": "action", EFFECT_NAME.DRAW_CARDS: 4, @"+1 buy, each other player drawns a card"
 
     # simple draw/discard effects
@@ -189,7 +201,7 @@ def add_card_counts(card_counts_lhs: CardCounts, card_counts_rhs: CardCounts) ->
 def is_treasure(card: Card) -> bool:
     return len(card.treasure_effects) > 0
 
-def treasure_total(card_counts: CardCounts) -> int:
+def money_from_treasures(card_counts: CardCounts) -> int:
     total = 0
     for card, card_occurrences in card_counts.items():
     # HACK this assumes all treasures only have one treasure effect
@@ -211,7 +223,7 @@ def total_player_vp(player: Player) -> int:
     return vp_total(player.hand) + vp_total(player.deck) + vp_total(player.discard_pile)
 
 def average_treasure_value_per_card(player: Player) -> float:
-    player_treasure_total = treasure_total(player.hand) + treasure_total(player.deck) + treasure_total(player.discard_pile)
+    player_treasure_total = money_from_treasures(player.hand) + money_from_treasures(player.deck) + money_from_treasures(player.discard_pile)
     player_card_total = num_cards(player.hand) + num_cards(player.deck) + num_cards(player.discard_pile)
     return player_treasure_total / player_card_total
 
@@ -252,10 +264,10 @@ def dict_to_card_counts(card_names_dict: Dict[str, int]) -> CardCounts:
 
 def action_phase_choices(action_game_state: GameState) -> List[Choice]:
     player = action_game_state.current_player()
-    buy_game_state = action_game_state._replace(turn_phase=TURN_PHASES.BUY)
+    treasure_game_state = action_game_state._replace(turn_phase=TURN_PHASES.TREASURE)
 
-    move_to_buy_phase = Choice(game_state=buy_game_state, description="move to buy phase")
-    choices = [move_to_buy_phase]
+    move_to_treasure_phase = Choice(game_state=treasure_game_state, description="move to treasure phase")
+    choices = [move_to_treasure_phase]
 
     assert action_game_state.actions >= 0
     if action_game_state.actions == 0:
@@ -275,16 +287,33 @@ def action_phase_choices(action_game_state: GameState) -> List[Choice]:
 
     return choices
 
+def treasure_phase_choices(treasure_game_state: GameState) -> List[Choice]:
+    # We don't support treasure choices yet, so we always return only a single
+    # choice of playing all your treasures.
+    buy_game_state = treasure_game_state._replace(
+        turn_phase=TURN_PHASES.BUY,
+        total_money=(treasure_game_state.total_money
+                     + money_from_treasures(treasure_game_state.current_player().hand)))
+    return [Choice(buy_game_state, f"play all treasures")]
+
 # TODO: make this return a set? Will need to stop using List in GameState
 def buy_phase_choices(buy_game_state: GameState) -> List[Choice]:
-    player = buy_game_state.current_player()
-    total_money_for_turn = treasure_total(player.hand)
+    # Move to cleanup state if-and-only-if the player buys nothing OR if they
+    # buy something with only 1 buy left.
+    turn_phase_after_one_buy = TURN_PHASES.BUY if buy_game_state.buys > 1 else TURN_PHASES.CLEANUP
+    game_state_after_one_buy = buy_game_state._replace(turn_phase=turn_phase_after_one_buy,
+                                                       buys=buy_game_state.buys-1)
 
-    buyable_cards = cards_in_supply_costing_less_than(buy_game_state, total_money_for_turn)
+    player = buy_game_state.current_player()
+    buyable_cards = cards_in_supply_costing_less_than(buy_game_state, buy_game_state.total_money)
+
+    buy_choices = gainable_cards_to_choices(game_state_after_one_buy,
+                                            buyable_cards,
+                                            pay_card_cost=True,
+                                            description_prefix="buy")
 
     cleanup_game_state = buy_game_state._replace(turn_phase=TURN_PHASES.CLEANUP)
     buy_nothing = Choice(game_state=cleanup_game_state, description="buy nothing")
-    buy_choices = gainable_cards_to_choices(cleanup_game_state, buyable_cards, "buy")
 
     return [buy_nothing] + buy_choices
 
@@ -317,9 +346,12 @@ def draw_cards_current_player(game_state: GameState, num_cards_to_draw: int) -> 
         player = draw_card(player)
     return game_state.replace_current_player(player)
 
-def gain_card_current_player(game_state: GameState, card: Card) -> GameState:
+def gain_card_current_player(game_state: GameState, card: Card, pay_card_cost: bool) -> GameState:
+    if pay_card_cost:
+        assert game_state.total_money >= card.cost
     return (game_state
-            ._replace(supply=remove_card(game_state.supply, card))
+            ._replace(supply=remove_card(game_state.supply, card),
+                      total_money=game_state.total_money - (card.cost if pay_card_cost else 0))
             .replace_current_player_kwargs(discard_pile=add_card(game_state.current_player().discard_pile,
                                                                  card)))
 
@@ -338,11 +370,12 @@ def cards_in_supply_costing_less_than(game_state, max_cost) -> List[Card]:
 
 def gainable_cards_to_choices(game_state: GameState,
                               gainable_cards: List[Card],
+                              pay_card_cost: bool,
                               description_prefix: str) -> List[Choice]:
     """
     Returns empty list if gainable_cards is empty
     """
-    return [Choice(gain_card_current_player(game_state, card),
+    return [Choice(gain_card_current_player(game_state, card, pay_card_cost),
                    f"{description_prefix} {card.name}")
             for card in gainable_cards]
 
@@ -363,6 +396,10 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
         return draw_cards_current_player(game_state, effect.value)
     elif effect.name == EFFECT_NAME.PLUS_ACTIONS:
         return game_state._replace(actions=game_state.actions + effect.value)
+    elif effect.name == EFFECT_NAME.PRODUCE_MONEY:
+        return game_state._replace(total_money=game_state.total_money + effect.value)
+    elif effect.name == EFFECT_NAME.PLUS_BUYS:
+        return game_state._replace(buys=game_state.buys + effect.value)
     elif effect.name == EFFECT_NAME.TRASH_A_CARD_FROM_YOUR_HAND:
         trash_nothing = Choice(game_state=game_state, description="trash nothing")
         choices = [trash_nothing]
@@ -380,7 +417,10 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
             single_choice = [Choice(game_state=game_state,
                                     description=f"gain nothing since no cards in supply cost {effect.value} or less")]
             return offer_choice(game_state, single_choice, current_player_chooser)
-        choices = gainable_cards_to_choices(game_state, gainable_cards, "gain")
+        choices = gainable_cards_to_choices(game_state,
+                                            gainable_cards,
+                                            pay_card_cost=False,
+                                            description_prefix="gain")
         return offer_choice(game_state, choices, current_player_chooser)
     elif effect.name == EFFECT_NAME.GAIN_A_TREASURE_TO_HAND_COSTING_UP_TO:
         gainable_cards = [card for card
@@ -445,8 +485,8 @@ def do_cleanup_phase(game_state: GameState) -> GameState:
         index = index % num_players
     game_state = game_state._replace(current_player_index=index)
 
-    # Next player gets 1 action
-    game_state = game_state._replace(turn_phase=TURN_PHASES.ACTION, actions=1)
+    # Reset player state
+    game_state = game_state._replace(turn_phase=TURN_PHASES.ACTION, actions=1, buys=1, total_money=0)
 
     return game_state
 
@@ -512,6 +552,8 @@ def initial_supply(num_players: int) -> Dict[str, int]:
     card_dict["workshop"] = 10
     card_dict["remodel"] = 10
     card_dict["mine"] = 10
+    card_dict["festival"] = 10
+    card_dict["market"] = 10
     return card_dict
 
 def initial_game_state(player_names: List[str]) -> GameState:
@@ -521,6 +563,8 @@ def initial_game_state(player_names: List[str]) -> GameState:
                      max_turns_per_player=0,
                      pending_effects=(),
                      actions=1,
+                     buys=1,
+                     total_money=0,
                      supply=dict_to_card_counts(initial_supply(num_players)),
                      turn_phase=TURN_PHASES.ACTION)
 
@@ -557,6 +601,9 @@ def game_step(game_state: GameState, choosers: List) -> GameState:
         return resolve_pending_effect(game_state, choosers)
     elif game_state.turn_phase == TURN_PHASES.ACTION:
         choices = action_phase_choices(game_state)
+        return offer_choice(game_state, choices, current_player_chooser)
+    elif game_state.turn_phase == TURN_PHASES.TREASURE:
+        choices = treasure_phase_choices(game_state)
         return offer_choice(game_state, choices, current_player_chooser)
     elif game_state.turn_phase == TURN_PHASES.BUY:
         choices = buy_phase_choices(game_state)

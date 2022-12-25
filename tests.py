@@ -4,7 +4,7 @@ import unittest
 
 
 class TestCards(unittest.TestCase):
-    def test_treasure_total(self):
+    def test_money_from_treasures(self):
         cases = [
             ({"copper": 1, "silver": 1, "gold": 1}, 6),
             ({"silver": 2, "gold": 3}, 13),
@@ -14,7 +14,7 @@ class TestCards(unittest.TestCase):
         ]
         for (card_names_dict, expected_treasure_total) in cases:
             card_counts = dict_to_card_counts(card_names_dict)
-            self.assertEqual(treasure_total(card_counts), expected_treasure_total)
+            self.assertEqual(money_from_treasures(card_counts), expected_treasure_total)
 
     def test_vp_total(self):
         cases = [
@@ -53,6 +53,8 @@ class TestCards(unittest.TestCase):
     def test_buy_phase_choices(self):
         buy_game_state = make_game_state(turn_phase=TURN_PHASES.BUY,
                                          supply=dict_to_card_counts({"copper": 1, "silver": 1, "gold": 1, "estate": 0, "duchy": 1, "province": 1}),
+                                         total_money=5,
+                                         buys=2,
                                          players=[make_player(hand=dict_to_card_counts({"silver": 1, "gold": 1}),
                                                               deck=dict_to_card_counts({"copper": 1}),
                                                               discard_pile=dict_to_card_counts({"estate": 1}))])
@@ -61,9 +63,9 @@ class TestCards(unittest.TestCase):
         cleanup_game_state = buy_game_state._replace(turn_phase=TURN_PHASES.CLEANUP)
         expected_choices = [
             Choice(cleanup_game_state, "buy nothing"),
-            Choice(cleanup_game_state._replace(supply=remove_card_by_name(cleanup_game_state.supply, "copper")).replace_current_player_kwargs(discard_pile=add_card_by_name(discard_pile, "copper")), "buy copper"),
-            Choice(cleanup_game_state._replace(supply=remove_card_by_name(cleanup_game_state.supply, "silver")).replace_current_player_kwargs(discard_pile=add_card_by_name(discard_pile, "silver")), "buy silver"),
-            Choice(cleanup_game_state._replace(supply=remove_card_by_name(cleanup_game_state.supply, "duchy")).replace_current_player_kwargs(discard_pile=add_card_by_name(discard_pile, "duchy")), "buy duchy"),
+            Choice(buy_game_state._replace(supply=remove_card_by_name(cleanup_game_state.supply, "copper"), total_money=5, buys=1).replace_current_player_kwargs(discard_pile=add_card_by_name(discard_pile, "copper")), "buy copper"),
+            Choice(buy_game_state._replace(supply=remove_card_by_name(cleanup_game_state.supply, "silver"), total_money=2, buys=1).replace_current_player_kwargs(discard_pile=add_card_by_name(discard_pile, "silver")), "buy silver"),
+            Choice(buy_game_state._replace(supply=remove_card_by_name(cleanup_game_state.supply, "duchy"), total_money=0, buys=1).replace_current_player_kwargs(discard_pile=add_card_by_name(discard_pile, "duchy")), "buy duchy"),
             # Can't buy estates because the supply pile is empty
         ]
         self.assertEqual(buy_phase_choices(buy_game_state), expected_choices)
