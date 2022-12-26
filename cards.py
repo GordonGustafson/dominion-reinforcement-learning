@@ -14,6 +14,7 @@ class EFFECT_NAME:
     GAIN_A_TREASURE_TO_HAND_COSTING_UP_TO = "gain_a_treasure_to_hand_costing_up_to"
     TRASH_GAIN_A_CARD_COSTING_UP_TO_X_MORE = "trash_gain_a_card_costing_up_to_x_more"
     MAY_TRASH_TREASURE_GAIN_TREASURE_TO_HAND_COSTING_UP_TO_X_MORE = "may_trash_treasure_gain_treasure_to_hand_costing_up_to_x_more"
+    DISCARD_ANY_NUMBER_THEN_DRAW_THAT_MANY = "discard_any_number_then_draw_that_many"
 
     PRODUCE_MONEY = "produce_money"
     VP = "vp"
@@ -73,7 +74,7 @@ class GameState(_GameStateBase):
     def current_player(self) -> Player:
         return self.players[self.current_player_index]
 
-    # These replace_current_player... methods are syntactic sugar for making other code clearer
+    # These replace_current_player.. methods are syntactic sugar for making other code clearer
     def replace_current_player(self, player):
         players_copy = self.players[:]
         players_copy[self.current_player_index] = player
@@ -81,6 +82,10 @@ class GameState(_GameStateBase):
 
     def replace_current_player_kwargs(self, **kwargs):
         return self.replace_current_player(self.current_player()._replace(**kwargs))
+
+    def prepend_effect(self, effect: Effect):
+        new_pending_effects = (effect,) + self.pending_effects
+        return self._replace(pending_effects=new_pending_effects)
 
 def make_game_state(
         players,
@@ -139,10 +144,10 @@ CARD_DEFS = {
                                                                   Effect(EFFECT_NAME.PLUS_BUYS, 1),
                                                                   Effect(EFFECT_NAME.PRODUCE_MONEY, 1, ),
                                                                   Effect(EFFECT_NAME.DRAW_CARDS, 1))),
-    # {"name": "Council Room", "cost": 5, "type": "action", EFFECT_NAME.DRAW_CARDS: 4, @"+1 buy, each other player drawns a card"
 
     # simple draw/discard effects
-    # {"name": "Cellar",       "cost": 2, "type": "action", "actions": 1, "discard_any_number_then_draw_that_many": 1,
+    "cellar":    make_card(name="cellar", cost=2, action_effects=(Effect(EFFECT_NAME.PLUS_ACTIONS, 1),
+                                                                  Effect(EFFECT_NAME.DISCARD_ANY_NUMBER_THEN_DRAW_THAT_MANY, None))),
     # {"name": "Harbinger",    "cost": 3, "type": "action", EFFECT_NAME.DRAW_CARDS: 1, "actions": 1, "put_any_card_from_discard_pile_onto_deck": 1,
     # {"name": "Poacher",      "cost": 4, "type": "action", EFFECT_NAME.DRAW_CARDS: 1, "actions": 1, @"+1$, discard a card per empty supply pile"
 
@@ -154,6 +159,7 @@ CARD_DEFS = {
     # {"name": "Gardens",      "cost": 4, "type": "victory", @"worth 1 vp per 10 cards you have (rounded down)"
 
     # attacks
+    # {"name": "Council Room", "cost": 5, "type": "action", EFFECT_NAME.DRAW_CARDS: 4, @"+1 buy, each other player drawns a card"
     # {"name": "Witch",        "cost": 5, "type": "action", EFFECT_NAME.DRAW_CARDS: 2, @"each other player gains a curse"
     # {"name": "Bandit",       "cost": 5, "type": "action", @"gain a gold. each other player reveals the top 2 cards of their deck, trashes a revealed treasure other than copper, and discards the rest"
     # {"name": "Militia",      "cost": 4, "type": "action", @"+2$ each other player discards down to 3 cards in hand"
@@ -334,7 +340,7 @@ def draw_card(player: Player) -> Player:
 
     return player
 
-def discard_specific_card_current_player(game_state: GameState, card_discarded: Card) -> Player:
+def discard_specific_card_current_player(game_state: GameState, card_discarded: Card) -> GameState:
     player = game_state.current_player()
     return game_state.replace_current_player_kwargs(
         hand=remove_card(player.hand, card_discarded),
@@ -442,9 +448,8 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
         choices = []
         for card in hand:
             gain_effect = Effect(EFFECT_NAME.GAIN_A_CARD_COSTING_UP_TO, card.cost + effect.value)
-            new_pending_effects = (gain_effect,) + game_state.pending_effects
-            new_game_state = game_state.replace_current_player_kwargs(hand=remove_card(hand, card))
-            new_game_state = new_game_state._replace(pending_effects=new_pending_effects)
+            new_game_state = game_state.prepend_effect(gain_effect)
+            new_game_state = new_game_state.replace_current_player_kwargs(hand=remove_card(hand, card))
             choices.append(Choice(game_state=new_game_state,
                                   description=f"trash {card.name}"))
         return offer_choice(game_state, choices, current_player_chooser)
@@ -454,13 +459,21 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
 
         for card in (c for c in hand if is_treasure(c)):
             gain_effect = Effect(EFFECT_NAME.GAIN_A_TREASURE_TO_HAND_COSTING_UP_TO, card.cost + effect.value)
-            new_pending_effects = (gain_effect,) + game_state.pending_effects
-            new_game_state = game_state.replace_current_player_kwargs(hand=remove_card(hand, card))
-            new_game_state = new_game_state._replace(pending_effects=new_pending_effects)
+            new_game_state = game_state.prepend_effect(gain_effect)
+            new_game_state = new_game_state.replace_current_player_kwargs(hand=remove_card(hand, card))
             choices.append(Choice(game_state=new_game_state,
                                   description=f"trash {card.name}"))
         return offer_choice(game_state, choices, current_player_chooser)
 
+    elif effect.name == EFFECT_NAME.DISCARD_ANY_NUMBER_THEN_DRAW_THAT_MANY:
+        hand = game_state.current_player().hand
+        for card in hand:
+            discard_to_draw_game_state = (discard_specific_card_current_player(game_state, card)
+                                          .prepend_effect(Effect(EFFECT_NAME.DRAW_CARDS, 1)))
+            choices = [Choice(game_state=discard_to_draw_game_state, description=f"discard {card.name} to draw a card"),
+                       Choice(game_state=game_state, description=f"don't discard {card.name}")]
+            game_state = offer_choice(game_state, choices, current_player_chooser)
+        return game_state
     else:
         raise ValueError("resolve_pending_effect does not support effect named '{effec.name}'")
 
@@ -554,6 +567,7 @@ def initial_supply(num_players: int) -> Dict[str, int]:
     card_dict["mine"] = 10
     card_dict["festival"] = 10
     card_dict["market"] = 10
+    card_dict["cellar"] = 10
     return card_dict
 
 def initial_game_state(player_names: List[str]) -> GameState:
