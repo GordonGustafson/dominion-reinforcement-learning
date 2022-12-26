@@ -1,7 +1,7 @@
 from cards import *
 
 def user_chooser(game_state: GameState, choices: List[Choice]) -> int:
-    print(f"actions: {game_state.actions}, hand: {card_counts_to_dict(game_state.current_player().hand)}")
+    print(f"money: {game_state.total_money}, actions: {game_state.actions}, hand: {card_counts_to_dict(game_state.current_player().hand)}")
     for i, choice in enumerate(choices):
         print(f"{i}: {choice.description}")
 
