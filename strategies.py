@@ -8,7 +8,9 @@ def read_int_from_stdin() -> int:
     return int(input_string)
 
 def user_chooser(game_state: GameState, choices: List[Choice]) -> int:
-    print(f"money: {game_state.total_money}, actions: {game_state.actions}, hand: {card_counts_to_dict(game_state.current_player().hand)}")
+    player = game_state.current_player()
+    print(f"money: {game_state.total_money}, actions: {game_state.actions}, hand: {card_counts_to_dict(player.hand)}")
+    print(f"deck: {card_counts_to_dict(player.deck)}, discard pile: {card_counts_to_dict(player.discard_pile)}, top of deck: {player.top_of_deck}")
     for i, choice in enumerate(choices):
         print(f"{i}: {choice.description}")
 
