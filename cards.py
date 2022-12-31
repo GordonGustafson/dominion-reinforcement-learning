@@ -16,6 +16,7 @@ class EFFECT_NAME:
     MAY_TRASH_TREASURE_GAIN_TREASURE_TO_HAND_COSTING_UP_TO_X_MORE = "may_trash_treasure_gain_treasure_to_hand_costing_up_to_x_more"
     DISCARD_ANY_NUMBER_THEN_DRAW_THAT_MANY = "discard_any_number_then_draw_that_many"
     MAY_PUT_ANY_CARD_FROM_DISCARD_PILE_ONTO_DECK = "may_put_any_card_from_discard_pile_onto_deck"
+    MAY_TRASH_A_COPPER_TO_PRODUCE_MONEY = "may_trash_a_copper_to_produce_money"
 
     PRODUCE_MONEY = "produce_money"
     VP = "vp"
@@ -159,7 +160,7 @@ CARD_DEFS = {
     # {"name": "Poacher",      "cost": 4, "type": "action", EFFECT_NAME.DRAW_CARDS: 1, "actions": 1, @"+1$, discard a card per empty supply pile"
 
     # interacting with other cards
-    # {"name": "Moneylender",  "cost": 4, "type": "action", @"you may trash a copper from your hand for +3$"
+    "moneylender": make_card(name="moneylender", cost=4, action_effects=(Effect(EFFECT_NAME.MAY_TRASH_A_COPPER_TO_PRODUCE_MONEY, 3),)),
     # {"name": "Merchant",     "cost": 3, "type": "action", EFFECT_NAME.DRAW_CARDS: 1, "actions": 1, "the_first_time_you_play_a_silver_this_turn_+1_money": 1,
 
     # VP cards
@@ -507,6 +508,16 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
                                   description=f"put {card.name} from discard pile on top of your deck"))
         return offer_choice(game_state, choices, current_player_chooser)
 
+    elif effect.name == EFFECT_NAME.MAY_TRASH_A_COPPER_TO_PRODUCE_MONEY:
+        choices = [Choice(game_state=game_state, description="Trash nothing")]
+        copper = card_name_to_card("copper")
+        if copper in hand:
+            new_game_state = (game_state
+                              .replace_current_player_kwargs(hand=remove_card(hand, copper))
+                              .prepend_effect(Effect(EFFECT_NAME.PRODUCE_MONEY, effect.value)))
+            choices.append(Choice(game_state=new_game_state, description="Trash a copper for 3 money"))
+        return offer_choice(game_state, choices, current_player_chooser)
+
     else:
         raise ValueError("resolve_pending_effect does not support effect named '{effec.name}'")
 
@@ -608,6 +619,7 @@ def initial_supply(num_players: int) -> Dict[str, int]:
     card_dict["market"] = 10
     card_dict["cellar"] = 10
     card_dict["harbinger"] = 10
+    card_dict["moneylender"] = 10
     return card_dict
 
 def initial_game_state(player_names: List[str]) -> GameState:
