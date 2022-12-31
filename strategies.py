@@ -1,14 +1,21 @@
 from cards import *
 
+def read_int_from_stdin() -> int:
+    input_string = input()
+    while not input_string.isdecimal():
+        print("non-numeric input, try again")
+        input_string = input()
+    return int(input_string)
+
 def user_chooser(game_state: GameState, choices: List[Choice]) -> int:
     print(f"money: {game_state.total_money}, actions: {game_state.actions}, hand: {card_counts_to_dict(game_state.current_player().hand)}")
     for i, choice in enumerate(choices):
         print(f"{i}: {choice.description}")
 
-    selected_choice = input()
-    while selected_choice == '' or int(selected_choice) >= len(choices) or int(selected_choice) < 0:
+    selected_choice = read_int_from_stdin()
+    while selected_choice not in range(0, len(choices)):
         print("index out of bounds, try again")
-        selected_choice = input()
+        selected_choice = read_int_from_stdin()
 
     return int(selected_choice)
 
