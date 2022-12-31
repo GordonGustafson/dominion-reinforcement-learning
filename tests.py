@@ -73,28 +73,35 @@ class TestCards(unittest.TestCase):
     def test_draw_card(self):
         player = make_player(hand=dict_to_card_counts({"silver": 1}),
                              deck=dict_to_card_counts({"copper": 1, "gold": 1}),
+                             top_of_deck=(card_name_to_card("curse"),),
                              discard_pile=dict_to_card_counts({"estate": 1}))
 
-        possibilities_after_one_draw = [make_player(hand=dict_to_card_counts({"copper": 1, "silver": 1}),
+        exp_after_one_draw = make_player(hand=dict_to_card_counts({"silver": 1, "curse": 1}),
+                                         deck=dict_to_card_counts({"copper": 1, "gold": 1}),
+                                         top_of_deck=(),
+                                         discard_pile=dict_to_card_counts({"estate": 1}))
+
+        possibilities_after_two_draws = [make_player(hand=dict_to_card_counts({"copper": 1, "silver": 1, "curse": 1}),
                                                     deck=dict_to_card_counts({"gold": 1}),
                                                     discard_pile=dict_to_card_counts({"estate": 1})),
-                                        make_player(hand=dict_to_card_counts({"gold": 1, "silver": 1}),
+                                        make_player(hand=dict_to_card_counts({"gold": 1, "silver": 1, "curse": 1}),
                                                     deck=dict_to_card_counts({"copper": 1}),
                                                     discard_pile=dict_to_card_counts({"estate": 1}))]
 
-        exp_after_two_draws = make_player(hand=dict_to_card_counts({"silver": 1, "gold": 1, "copper": 1}),
+        exp_after_three_draws = make_player(hand=dict_to_card_counts({"silver": 1, "gold": 1, "copper": 1, "curse": 1}),
                                           deck=dict_to_card_counts({}),
                                           discard_pile=dict_to_card_counts({"estate": 1}))
 
-        exp_after_three_draws = make_player(hand=dict_to_card_counts({"silver": 1, "gold": 1, "copper": 1, "estate": 1}),
+        exp_after_four_draws = make_player(hand=dict_to_card_counts({"silver": 1, "gold": 1, "copper": 1, "estate": 1, "curse": 1}),
                                             deck=dict_to_card_counts({}),
                                             discard_pile=dict_to_card_counts({}))
 
-        self.assertTrue(draw_card(player) in possibilities_after_one_draw)
-        self.assertEqual(draw_card(draw_card(player)), exp_after_two_draws)
-        # No change when deck and discard pile are both empty
+        self.assertEqual(draw_card(player), exp_after_one_draw)
+        self.assertTrue(draw_card(draw_card(player)) in possibilities_after_two_draws)
         self.assertEqual(draw_card(draw_card(draw_card(player))), exp_after_three_draws)
-        self.assertEqual(draw_card(draw_card(draw_card(draw_card(player)))), exp_after_three_draws)
+        self.assertEqual(draw_card(draw_card(draw_card(draw_card(player)))), exp_after_four_draws)
+        # No change when top_of_deck, deck, and discard pile are all empty
+        self.assertEqual(draw_card(draw_card(draw_card(draw_card(draw_card(player))))), exp_after_four_draws)
 
     def do_cleanup_phase(self):
         game_state = make_game_state(turn_phase=TURN_PHASES.CLEANUP,

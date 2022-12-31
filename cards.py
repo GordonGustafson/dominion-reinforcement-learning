@@ -15,6 +15,7 @@ class EFFECT_NAME:
     TRASH_GAIN_A_CARD_COSTING_UP_TO_X_MORE = "trash_gain_a_card_costing_up_to_x_more"
     MAY_TRASH_TREASURE_GAIN_TREASURE_TO_HAND_COSTING_UP_TO_X_MORE = "may_trash_treasure_gain_treasure_to_hand_costing_up_to_x_more"
     DISCARD_ANY_NUMBER_THEN_DRAW_THAT_MANY = "discard_any_number_then_draw_that_many"
+    MAY_PUT_ANY_CARD_FROM_DISCARD_PILE_ONTO_DECK = "may_put_any_card_from_discard_pile_onto_deck"
 
     PRODUCE_MONEY = "produce_money"
     VP = "vp"
@@ -40,15 +41,19 @@ CardCounts = Multiset
 Player = NamedTuple("Player", [
     ("hand", CardCounts),
     ("deck", CardCounts),
+    ("top_of_deck", Tuple[Card]),
+    ("played_actions", CardCounts),
     ("discard_pile", CardCounts),
     ("name", str),
 ])
 
 def make_player(hand=Multiset(),
                 deck=Multiset(),
+                top_of_deck=(),
+                played_actions=Multiset(),
                 discard_pile=Multiset(),
                 name="unnamed player"):
-    return Player(hand, deck, discard_pile, name)
+    return Player(hand, deck, top_of_deck, played_actions, discard_pile, name)
 
 # TODO: make this a proper Python enum
 class TURN_PHASES:
@@ -148,7 +153,9 @@ CARD_DEFS = {
     # simple draw/discard effects
     "cellar":    make_card(name="cellar", cost=2, action_effects=(Effect(EFFECT_NAME.PLUS_ACTIONS, 1),
                                                                   Effect(EFFECT_NAME.DISCARD_ANY_NUMBER_THEN_DRAW_THAT_MANY, None))),
-    # {"name": "Harbinger",    "cost": 3, "type": "action", EFFECT_NAME.DRAW_CARDS: 1, "actions": 1, "put_any_card_from_discard_pile_onto_deck": 1,
+    "harbinger": make_card(name="harbinger", cost=3, action_effects=(Effect(EFFECT_NAME.PLUS_ACTIONS, 1),
+                                                                     Effect(EFFECT_NAME.DRAW_CARDS, 1),
+                                                                     Effect(EFFECT_NAME.MAY_PUT_ANY_CARD_FROM_DISCARD_PILE_ONTO_DECK, None))),
     # {"name": "Poacher",      "cost": 4, "type": "action", EFFECT_NAME.DRAW_CARDS: 1, "actions": 1, @"+1$, discard a card per empty supply pile"
 
     # interacting with other cards
@@ -287,7 +294,7 @@ def action_phase_choices(action_game_state: GameState) -> List[Choice]:
         pending_effects = action.action_effects + action_game_state.pending_effects
         game_state = action_game_state._replace(pending_effects=pending_effects,
                                                 actions=action_game_state.actions - 1)
-        game_state = discard_specific_card_current_player(game_state, action)
+        game_state = move_specific_card_to_played_actions(game_state, action)
 
         choices.append(Choice(game_state, f"play {action.name}"))
 
@@ -323,11 +330,19 @@ def buy_phase_choices(buy_game_state: GameState) -> List[Choice]:
 
     return [buy_nothing] + buy_choices
 
+def add_card_to_top_of_deck(player: Player, card: Card) -> Player:
+    return player._replace(top_of_deck=(card,) + player.top_of_deck)
+
 def draw_card(player: Player) -> Player:
-    if num_cards(player.deck) == 0 and num_cards(player.discard_pile) == 0:
+    if len(player.top_of_deck) == 0 and num_cards(player.deck) == 0 and num_cards(player.discard_pile) == 0:
         return player
 
-    if num_cards(player.deck) == 0:
+    if len(player.top_of_deck) > 0:
+        player = player._replace(hand=add_card(player.hand, player.top_of_deck[0]),
+                                 top_of_deck=player.top_of_deck[1:])
+        return player
+
+    if len(player.top_of_deck) == 0 and num_cards(player.deck) == 0:
         player = player._replace(deck=player.discard_pile,
                                  discard_pile=empty_card_counts())
 
@@ -345,6 +360,12 @@ def discard_specific_card_current_player(game_state: GameState, card_discarded: 
     return game_state.replace_current_player_kwargs(
         hand=remove_card(player.hand, card_discarded),
         discard_pile=add_card(player.discard_pile, card_discarded))
+
+def move_specific_card_to_played_actions(game_state: GameState, action_played: Card) -> GameState:
+    player = game_state.current_player()
+    return game_state.replace_current_player_kwargs(
+        hand=remove_card(player.hand, action_played),
+        played_actions=add_card(player.played_actions, action_played))
 
 def draw_cards_current_player(game_state: GameState, num_cards_to_draw: int) -> GameState:
     player = game_state.current_player()
@@ -474,17 +495,33 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
                        Choice(game_state=game_state, description=f"don't discard {card.name}")]
             game_state = offer_choice(game_state, choices, current_player_chooser)
         return game_state
+    elif effect.name == EFFECT_NAME.MAY_PUT_ANY_CARD_FROM_DISCARD_PILE_ONTO_DECK:
+        current_player = game_state.current_player()
+        discard_pile = current_player.discard_pile
+        choices = [Choice(game_state=game_state, description="do not put a card from discard pile onto deck")]
+        for card, freq in discard_pile.items():
+            new_current_player = current_player._replace(discard_pile=remove_card(discard_pile, card))
+            new_current_player = add_card_to_top_of_deck(new_current_player, card)
+            card_onto_deck_game_state = game_state.replace_current_player(new_current_player)
+            choices.append(Choice(game_state=card_onto_deck_game_state,
+                                  description=f"put {card.name} from discard pile on top of your deck"))
+        return offer_choice(game_state, choices, current_player_chooser)
+
     else:
         raise ValueError("resolve_pending_effect does not support effect named '{effec.name}'")
 
 def do_cleanup_phase(game_state: GameState) -> GameState:
     assert game_state.turn_phase == TURN_PHASES.CLEANUP
 
-    # Discard your hand
+    # Discard your hand and any actions played
+    new_discard_pile = add_card_counts(game_state.current_player().hand,
+                                       game_state.current_player().discard_pile)
+    new_discard_pile = add_card_counts(game_state.current_player().played_actions,
+                                       new_discard_pile)
     game_state = game_state.replace_current_player_kwargs(
         hand=empty_card_counts(),
-        discard_pile=add_card_counts(game_state.current_player().hand,
-                                     game_state.current_player().discard_pile),
+        played_actions=empty_card_counts(),
+        discard_pile=new_discard_pile,
     )
 
     # draw 5 cards
@@ -510,6 +547,8 @@ def do_cleanup_phase(game_state: GameState) -> GameState:
 def initial_player_state(name: str) -> Player:
     player = Player(name=name,
                     hand=dict_to_card_counts({}),
+                    top_of_deck=(),
+                    played_actions=dict_to_card_counts({}),
                     deck=dict_to_card_counts({"estate": 3, "copper": 7}),
                     discard_pile=dict_to_card_counts({}))
 
@@ -568,6 +607,7 @@ def initial_supply(num_players: int) -> Dict[str, int]:
     card_dict["festival"] = 10
     card_dict["market"] = 10
     card_dict["cellar"] = 10
+    card_dict["harbinger"] = 10
     return card_dict
 
 def initial_game_state(player_names: List[str]) -> GameState:
