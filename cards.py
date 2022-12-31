@@ -17,6 +17,7 @@ class EFFECT_NAME:
     DISCARD_ANY_NUMBER_THEN_DRAW_THAT_MANY = "discard_any_number_then_draw_that_many"
     MAY_PUT_ANY_CARD_FROM_DISCARD_PILE_ONTO_DECK = "may_put_any_card_from_discard_pile_onto_deck"
     MAY_TRASH_A_COPPER_TO_PRODUCE_MONEY = "may_trash_a_copper_to_produce_money"
+    EACH_OTHER_PLAYER_DRAWS_A_CARD = "each_other_player_draws_a_card"
 
     PRODUCE_MONEY = "produce_money"
     VP = "vp"
@@ -97,7 +98,6 @@ def make_game_state(
         players,
         current_player_index=0,
         max_turns_per_player=0,
-        round=0,
         supply=Multiset(),
         turn_phase=TURN_PHASES.ACTION,
         actions=1,
@@ -167,7 +167,10 @@ CARD_DEFS = {
     # {"name": "Gardens",      "cost": 4, "type": "victory", @"worth 1 vp per 10 cards you have (rounded down)"
 
     # attacks
-    # {"name": "Council Room", "cost": 5, "type": "action", EFFECT_NAME.DRAW_CARDS: 4, @"+1 buy, each other player drawns a card"
+    "council room": make_card(name="council room", cost=5, action_effects=(Effect(EFFECT_NAME.DRAW_CARDS, 4),
+                                                                           Effect(EFFECT_NAME.PLUS_BUYS, 1),
+                                                                           Effect(EFFECT_NAME.EACH_OTHER_PLAYER_DRAWS_A_CARD, None))),
+
     # {"name": "Witch",        "cost": 5, "type": "action", EFFECT_NAME.DRAW_CARDS: 2, @"each other player gains a curse"
     # {"name": "Bandit",       "cost": 5, "type": "action", @"gain a gold. each other player reveals the top 2 cards of their deck, trashes a revealed treasure other than copper, and discards the rest"
     # {"name": "Militia",      "cost": 4, "type": "action", @"+2$ each other player discards down to 3 cards in hand"
@@ -518,6 +521,10 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
             choices.append(Choice(game_state=new_game_state, description="Trash a copper for 3 money"))
         return offer_choice(game_state, choices, current_player_chooser)
 
+    elif effect.name == EFFECT_NAME.EACH_OTHER_PLAYER_DRAWS_A_CARD:
+        new_players = [(p if index == game_state.current_player_index else draw_card(p))
+                       for index, p in enumerate(game_state.players)]
+        return game_state._replace(players=new_players)
     else:
         raise ValueError("resolve_pending_effect does not support effect named '{effec.name}'")
 
@@ -620,6 +627,7 @@ def initial_supply(num_players: int) -> Dict[str, int]:
     card_dict["cellar"] = 10
     card_dict["harbinger"] = 10
     card_dict["moneylender"] = 10
+    card_dict["council room"] = 10
     return card_dict
 
 def initial_game_state(player_names: List[str]) -> GameState:

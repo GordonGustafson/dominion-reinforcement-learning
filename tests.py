@@ -103,9 +103,10 @@ class TestCards(unittest.TestCase):
         # No change when top_of_deck, deck, and discard pile are all empty
         self.assertEqual(draw_card(draw_card(draw_card(draw_card(draw_card(player))))), exp_after_four_draws)
 
-    def do_cleanup_phase(self):
+    def test_do_cleanup_phase(self):
         game_state = make_game_state(turn_phase=TURN_PHASES.CLEANUP,
                                      current_player_index=1,
+                                     max_turns_per_player=0,
                                      players=[make_player(hand=dict_to_card_counts({"copper": 5}),
                                                           deck=dict_to_card_counts({"estate": 2}),
                                                           discard_pile=dict_to_card_counts({"copper": 2})),
@@ -117,15 +118,16 @@ class TestCards(unittest.TestCase):
         game_state_after_cleanup = make_game_state(turn_phase=TURN_PHASES.ACTION,
                                                    pending_effects=(),
                                                    current_player_index=0,
-                                                   players=[make_player(hand=dict_to_card_counts({"estate": 2, "copper": 3}),
-                                                                        deck=dict_to_card_counts({"copper": 4}),
+                                                   max_turns_per_player=1,
+                                                   players=[make_player(hand=dict_to_card_counts({"copper": 5}),
+                                                                        deck=dict_to_card_counts({"estate": 2}),
+                                                                        discard_pile=dict_to_card_counts({"copper": 2})),
+                                                            make_player(hand=dict_to_card_counts({"copper": 2, "estate": 1}),
+                                                                        deck=dict_to_card_counts({}),
                                                                         discard_pile=dict_to_card_counts({})),
-                                                            make_player(hand=dict_to_card_counts({"copper": 1}),
-                                                                        deck=dict_to_card_counts({"estate": 1}),
-                                                                        discard_pile=dict_to_card_counts({"copper": 1})),
                                                             ])
 
-        self.assertEqual(game_state, game_state_after_cleanup)
+        self.assertEqual(do_cleanup_phase(game_state), game_state_after_cleanup)
 
 
 if __name__ == '__main__':
