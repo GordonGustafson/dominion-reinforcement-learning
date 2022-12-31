@@ -419,6 +419,11 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
     game_state = game_state._replace(pending_effects=remaining_effects)
     current_player_chooser = choosers[game_state.current_player_index]
 
+    # Always setting all these variables makes the code in the if branches a little more concise.
+    current_player = game_state.current_player()
+    discard_pile = current_player.discard_pile
+    hand = current_player.hand
+
     if effect.name == EFFECT_NAME.DRAW_CARDS:
         return draw_cards_current_player(game_state, effect.value)
     elif effect.name == EFFECT_NAME.PLUS_ACTIONS:
@@ -430,7 +435,6 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
     elif effect.name == EFFECT_NAME.MAY_TRASH_A_CARD_FROM_YOUR_HAND:
         trash_nothing = Choice(game_state=game_state, description="trash nothing")
         choices = [trash_nothing]
-        hand = game_state.current_player().hand
         for card in hand:
             after_trashing_card = game_state.replace_current_player_kwargs(hand=remove_card(hand, card))
             choices.append(Choice(game_state=after_trashing_card,
@@ -460,7 +464,6 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
         choices = gainable_cards_to_hand_to_choices(game_state, gainable_cards, "gain")
         return offer_choice(game_state, choices, current_player_chooser)
     elif effect.name == EFFECT_NAME.TRASH_GAIN_A_CARD_COSTING_UP_TO_X_MORE:
-        hand = game_state.current_player().hand
         if len(hand) == 0:
             single_choice = [Choice(game_state=game_state,
                                     description="trash and gain nothing since there are no cards in your hand")]
@@ -475,7 +478,6 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
                                   description=f"trash {card.name}"))
         return offer_choice(game_state, choices, current_player_chooser)
     elif effect.name == EFFECT_NAME.MAY_TRASH_TREASURE_GAIN_TREASURE_TO_HAND_COSTING_UP_TO_X_MORE:
-        hand = game_state.current_player().hand
         choices = [Choice(game_state=game_state, description="trash nothing")]
 
         for card in (c for c in hand if is_treasure(c)):
@@ -487,7 +489,6 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
         return offer_choice(game_state, choices, current_player_chooser)
 
     elif effect.name == EFFECT_NAME.DISCARD_ANY_NUMBER_THEN_DRAW_THAT_MANY:
-        hand = game_state.current_player().hand
         for card in hand:
             discard_to_draw_game_state = (discard_specific_card_current_player(game_state, card)
                                           .prepend_effect(Effect(EFFECT_NAME.DRAW_CARDS, 1)))
@@ -496,8 +497,6 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
             game_state = offer_choice(game_state, choices, current_player_chooser)
         return game_state
     elif effect.name == EFFECT_NAME.MAY_PUT_ANY_CARD_FROM_DISCARD_PILE_ONTO_DECK:
-        current_player = game_state.current_player()
-        discard_pile = current_player.discard_pile
         choices = [Choice(game_state=game_state, description="do not put a card from discard pile onto deck")]
         for card, freq in discard_pile.items():
             new_current_player = current_player._replace(discard_pile=remove_card(discard_pile, card))
