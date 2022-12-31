@@ -435,7 +435,7 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
     elif effect.name == EFFECT_NAME.MAY_TRASH_A_CARD_FROM_YOUR_HAND:
         trash_nothing = Choice(game_state=game_state, description="trash nothing")
         choices = [trash_nothing]
-        for card in hand:
+        for card, freq in hand.items():
             after_trashing_card = game_state.replace_current_player_kwargs(hand=remove_card(hand, card))
             choices.append(Choice(game_state=after_trashing_card,
                                   description=f"trash {card.name}"))
@@ -470,7 +470,7 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
             return offer_choice(game_state, single_choice, current_player_chooser)
 
         choices = []
-        for card in hand:
+        for card, freq in hand.items():
             gain_effect = Effect(EFFECT_NAME.GAIN_A_CARD_COSTING_UP_TO, card.cost + effect.value)
             new_game_state = game_state.prepend_effect(gain_effect)
             new_game_state = new_game_state.replace_current_player_kwargs(hand=remove_card(hand, card))
@@ -480,7 +480,7 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
     elif effect.name == EFFECT_NAME.MAY_TRASH_TREASURE_GAIN_TREASURE_TO_HAND_COSTING_UP_TO_X_MORE:
         choices = [Choice(game_state=game_state, description="trash nothing")]
 
-        for card in (c for c in hand if is_treasure(c)):
+        for card in (c for c, f in hand.items() if is_treasure(c)):
             gain_effect = Effect(EFFECT_NAME.GAIN_A_TREASURE_TO_HAND_COSTING_UP_TO, card.cost + effect.value)
             new_game_state = game_state.prepend_effect(gain_effect)
             new_game_state = new_game_state.replace_current_player_kwargs(hand=remove_card(hand, card))
@@ -489,6 +489,7 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
         return offer_choice(game_state, choices, current_player_chooser)
 
     elif effect.name == EFFECT_NAME.DISCARD_ANY_NUMBER_THEN_DRAW_THAT_MANY:
+        # Iterate over every card, including duplicatest
         for card in hand:
             discard_to_draw_game_state = (discard_specific_card_current_player(game_state, card)
                                           .prepend_effect(Effect(EFFECT_NAME.DRAW_CARDS, 1)))
