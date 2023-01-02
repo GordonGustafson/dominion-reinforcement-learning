@@ -18,6 +18,7 @@ class EFFECT_NAME:
     MAY_PUT_ANY_CARD_FROM_DISCARD_PILE_ONTO_DECK = "may_put_any_card_from_discard_pile_onto_deck"
     MAY_TRASH_A_COPPER_TO_PRODUCE_MONEY = "may_trash_a_copper_to_produce_money"
     EACH_OTHER_PLAYER_DRAWS_A_CARD = "each_other_player_draws_a_card"
+    EACH_OTHER_PLAYER_GAINS_A_CURSE = "each_other_player_gains_a_curse"
 
     PRODUCE_MONEY = "produce_money"
     VP = "vp"
@@ -81,11 +82,16 @@ class GameState(_GameStateBase):
     def current_player(self) -> Player:
         return self.players[self.current_player_index]
 
-    # These replace_current_player.. methods are syntactic sugar for making other code clearer
-    def replace_current_player(self, player):
+    def replace_player_by_index(self, index, player):
         players_copy = self.players[:]
-        players_copy[self.current_player_index] = player
+        players_copy[index] = player
         return self._replace(players=players_copy)
+
+    def replace_player_by_index_kwargs(self, index, **kwargs):
+        return self.replace_player_by_index(index, self.players[index]._replace(**kwargs))
+
+    def replace_current_player(self, player):
+        return self.replace_player_by_index(self.current_player_index, player)
 
     def replace_current_player_kwargs(self, **kwargs):
         return self.replace_current_player(self.current_player()._replace(**kwargs))
@@ -170,6 +176,8 @@ CARD_DEFS = {
     "council room": make_card(name="council room", cost=5, action_effects=(Effect(EFFECT_NAME.DRAW_CARDS, 4),
                                                                            Effect(EFFECT_NAME.PLUS_BUYS, 1),
                                                                            Effect(EFFECT_NAME.EACH_OTHER_PLAYER_DRAWS_A_CARD, None))),
+    "witch":        make_card(name="witch", cost=5, action_effects=(Effect(EFFECT_NAME.DRAW_CARDS, 2),
+                                                                    Effect(EFFECT_NAME.EACH_OTHER_PLAYER_GAINS_A_CURSE, None))),
 
     # {"name": "Witch",        "cost": 5, "type": "action", EFFECT_NAME.DRAW_CARDS: 2, @"each other player gains a curse"
     # {"name": "Bandit",       "cost": 5, "type": "action", @"gain a gold. each other player reveals the top 2 cards of their deck, trashes a revealed treasure other than copper, and discards the rest"
@@ -377,16 +385,25 @@ def draw_cards_current_player(game_state: GameState, num_cards_to_draw: int) -> 
         player = draw_card(player)
     return game_state.replace_current_player(player)
 
-def gain_card_current_player(game_state: GameState, card: Card, pay_card_cost: bool) -> GameState:
-    if pay_card_cost:
-        assert game_state.total_money >= card.cost
+def gain_card_by_player_index(game_state: GameState, card: Card, index: int) -> GameState:
+    if game_state.supply[card] <= 0:
+        print(f"Player index {index} not gaining {card.name} because its supply pile is empty")
+        return game_state
+
+    player_at_index = game_state.players[index]
     return (game_state
-            ._replace(supply=remove_card(game_state.supply, card),
-                      total_money=game_state.total_money - (card.cost if pay_card_cost else 0))
-            .replace_current_player_kwargs(discard_pile=add_card(game_state.current_player().discard_pile,
-                                                                 card)))
+            ._replace(supply=remove_card(game_state.supply, card))
+            .replace_player_by_index_kwargs(index=index,
+                                            discard_pile=add_card(player_at_index.discard_pile, card)))
+
+def gain_card_current_player(game_state: GameState, card: Card) -> GameState:
+    return gain_card_by_player_index(game_state, card, game_state.current_player_index)
 
 def gain_card_to_hand_current_player(game_state: GameState, card: Card) -> GameState:
+    if game_state.supply[card] <= 0:
+        print(f"Current player not gaining {card.name} to hand because its supply pile is empty")
+        return game_state
+
     return (game_state
             ._replace(supply=remove_card(game_state.supply, card))
             .replace_current_player_kwargs(hand=add_card(game_state.current_player().hand,
@@ -406,7 +423,8 @@ def gainable_cards_to_choices(game_state: GameState,
     """
     Returns empty list if gainable_cards is empty
     """
-    return [Choice(gain_card_current_player(game_state, card, pay_card_cost),
+    return [Choice(gain_card_current_player(game_state, card)
+                   ._replace(total_money=game_state.total_money - (card.cost if pay_card_cost else 0)),
                    f"{description_prefix} {card.name}")
             for card in gainable_cards]
 
@@ -525,6 +543,15 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
         new_players = [(p if index == game_state.current_player_index else draw_card(p))
                        for index, p in enumerate(game_state.players)]
         return game_state._replace(players=new_players)
+    elif effect.name == EFFECT_NAME.EACH_OTHER_PLAYER_GAINS_A_CURSE:
+        non_current_player_indices = list(range(len(game_state.players)))
+        non_current_player_indices.remove(game_state.current_player_index)
+
+        curse = card_name_to_card("curse")
+        for index in non_current_player_indices:
+            game_state = gain_card_by_player_index(game_state, curse, index)
+
+        return game_state
     else:
         raise ValueError("resolve_pending_effect does not support effect named '{effec.name}'")
 
@@ -628,6 +655,7 @@ def initial_supply(num_players: int) -> Dict[str, int]:
     card_dict["harbinger"] = 10
     card_dict["moneylender"] = 10
     card_dict["council room"] = 10
+    card_dict["witch"] = 10
     return card_dict
 
 def initial_game_state(player_names: List[str]) -> GameState:
