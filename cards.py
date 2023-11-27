@@ -1,7 +1,7 @@
 import random
 
 from multiset import Multiset
-from typing import NamedTuple, Tuple, List, Dict
+from typing import NamedTuple, Tuple, List, Dict, Set
 
 
 # TODO: make this a proper Python enum
@@ -19,6 +19,7 @@ class EFFECT_NAME:
     MAY_TRASH_A_COPPER_TO_PRODUCE_MONEY = "may_trash_a_copper_to_produce_money"
     EACH_OTHER_PLAYER_DRAWS_A_CARD = "each_other_player_draws_a_card"
     EACH_OTHER_PLAYER_GAINS_A_CURSE = "each_other_player_gains_a_curse"
+    EACH_OTHER_PLAYER_DISCARDS_DOWN_TO = "each_other_player_discards_down_to"
 
     PRODUCE_MONEY = "produce_money"
     VP = "vp"
@@ -176,12 +177,11 @@ CARD_DEFS = {
     "council room": make_card(name="council room", cost=5, action_effects=(Effect(EFFECT_NAME.DRAW_CARDS, 4),
                                                                            Effect(EFFECT_NAME.PLUS_BUYS, 1),
                                                                            Effect(EFFECT_NAME.EACH_OTHER_PLAYER_DRAWS_A_CARD, None))),
-    "witch":        make_card(name="witch", cost=5, action_effects=(Effect(EFFECT_NAME.DRAW_CARDS, 2),
-                                                                    Effect(EFFECT_NAME.EACH_OTHER_PLAYER_GAINS_A_CURSE, None))),
-
-    # {"name": "Witch",        "cost": 5, "type": "action", EFFECT_NAME.DRAW_CARDS: 2, @"each other player gains a curse"
+    "witch": make_card(name="witch", cost=5, action_effects=(Effect(EFFECT_NAME.DRAW_CARDS, 2),
+                                                             Effect(EFFECT_NAME.EACH_OTHER_PLAYER_GAINS_A_CURSE, None))),
+    "militia": make_card(name="militia", cost=4, action_effects=(Effect(EFFECT_NAME.PRODUCE_MONEY, 2),
+                                                                 Effect(EFFECT_NAME.EACH_OTHER_PLAYER_DISCARDS_DOWN_TO, 3))),
     # {"name": "Bandit",       "cost": 5, "type": "action", @"gain a gold. each other player reveals the top 2 cards of their deck, trashes a revealed treasure other than copper, and discards the rest"
-    # {"name": "Militia",      "cost": 4, "type": "action", @"+2$ each other player discards down to 3 cards in hand"
     # {"name": "Bureaucrat",   "cost": 4, "type": "action", @"gain a silver onto your deck. each other player reveals a victory card from their hand it puts it onto their deck (or reveals a hand with no victory cards)"
     # {"name": "Moat",         "cost": 2, "type": "action", EFFECT_NAME.DRAW_CARDS: 2, "moat_effect": 1,
 
@@ -252,6 +252,11 @@ def average_treasure_value_per_card(player: Player) -> float:
     player_card_total = num_cards(player.hand) + num_cards(player.deck) + num_cards(player.discard_pile)
     return player_treasure_total / player_card_total
 
+def non_current_player_indices(game_state: GameState):
+    result = list(range(len(game_state.players)))
+    result.remove(game_state.current_player_index)
+    return result
+
 ################################################################################
 #                                                  Operations Using Card Names #
 ################################################################################
@@ -281,6 +286,12 @@ def dict_to_card_counts(card_names_dict: Dict[str, int]) -> CardCounts:
     for card_name, card_occurrences in card_names_dict.items():
         result[card_name_to_card(card_name)] = card_occurrences
     return result
+
+def unique_cards(card_counts: CardCounts) -> Set[Card]:
+    # For some reason .key() didn't work, even though it's described here: https://pythonhosted.org/multiset/
+    # maybe try updating my multiset package version?
+    # use this hack for now.
+    return set(card_counts)
 
 
 ################################################################################
@@ -373,6 +384,13 @@ def discard_specific_card_current_player(game_state: GameState, card_discarded: 
         hand=remove_card(player.hand, card_discarded),
         discard_pile=add_card(player.discard_pile, card_discarded))
 
+def discard_specific_card_player_index(game_state: GameState, card_discarded: Card, index: int) -> GameState:
+    player = game_state.players[index]
+    return game_state.replace_player_by_index_kwargs(
+        index=index,
+        hand=remove_card(player.hand, card_discarded),
+        discard_pile=add_card(player.discard_pile, card_discarded))
+
 def move_specific_card_to_played_actions(game_state: GameState, action_played: Card) -> GameState:
     player = game_state.current_player()
     return game_state.replace_current_player_kwargs(
@@ -434,6 +452,14 @@ def gainable_cards_to_hand_to_choices(game_state: GameState,
     return [Choice(gain_card_to_hand_current_player(game_state, card),
                    f"{description_prefix} {card.name} to hand")
             for card in gainable_cards]
+
+def player_index_discards_one_card_choices(game_state: GameState, player_index: int) -> List[Choice]:
+    player_hand = game_state.players[player_index].hand
+    return [
+        Choice(discard_specific_card_player_index(game_state, card, player_index),
+               f"Discard {card.name}")
+        for card in unique_cards(player_hand)
+    ]
 
 def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
     effect = game_state.pending_effects[0]
@@ -544,13 +570,17 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
                        for index, p in enumerate(game_state.players)]
         return game_state._replace(players=new_players)
     elif effect.name == EFFECT_NAME.EACH_OTHER_PLAYER_GAINS_A_CURSE:
-        non_current_player_indices = list(range(len(game_state.players)))
-        non_current_player_indices.remove(game_state.current_player_index)
-
         curse = card_name_to_card("curse")
-        for index in non_current_player_indices:
+        for index in non_current_player_indices(game_state):
             game_state = gain_card_by_player_index(game_state, curse, index)
 
+        return game_state
+    elif effect.name == EFFECT_NAME.EACH_OTHER_PLAYER_DISCARDS_DOWN_TO:
+        for other_player_index in non_current_player_indices(game_state):
+            while len(game_state.players[other_player_index].hand) > effect.value:
+                game_state = offer_choice(game_state,
+                                          player_index_discards_one_card_choices(game_state, other_player_index),
+                                          choosers[other_player_index])
         return game_state
     else:
         raise ValueError("resolve_pending_effect does not support effect named '{effec.name}'")
@@ -656,6 +686,7 @@ def initial_supply(num_players: int) -> Dict[str, int]:
     card_dict["moneylender"] = 10
     card_dict["council room"] = 10
     card_dict["witch"] = 10
+    card_dict["militia"] = 10
     return card_dict
 
 def initial_game_state(player_names: List[str]) -> GameState:
