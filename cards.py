@@ -468,6 +468,7 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
     current_player_chooser = choosers[game_state.current_player_index]
 
     # Always setting all these variables makes the code in the if branches a little more concise.
+    current_player_index = game_state.current_player_index
     current_player = game_state.current_player()
     discard_pile = current_player.discard_pile
     hand = current_player.hand
@@ -487,7 +488,7 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
             after_trashing_card = game_state.replace_current_player_kwargs(hand=remove_card(hand, card))
             choices.append(Choice(game_state=after_trashing_card,
                                   description=f"trash {card.name}"))
-        return offer_choice(game_state, choices, current_player_chooser)
+        return offer_choice(game_state, choices, current_player_chooser, current_player_index)
     elif effect.name == EFFECT_NAME.GAIN_A_CARD_COSTING_UP_TO:
         gainable_cards = cards_in_supply_costing_less_than(game_state, effect.value)
         if len(gainable_cards) == 0:
@@ -495,12 +496,12 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
             # Can rethink this in the future.
             single_choice = [Choice(game_state=game_state,
                                     description=f"gain nothing since no cards in supply cost {effect.value} or less")]
-            return offer_choice(game_state, single_choice, current_player_chooser)
+            return offer_choice(game_state, single_choice, current_player_chooser, current_player_index)
         choices = gainable_cards_to_choices(game_state,
                                             gainable_cards,
                                             pay_card_cost=False,
                                             description_prefix="gain")
-        return offer_choice(game_state, choices, current_player_chooser)
+        return offer_choice(game_state, choices, current_player_chooser, current_player_index)
     elif effect.name == EFFECT_NAME.GAIN_A_TREASURE_TO_HAND_COSTING_UP_TO:
         gainable_cards = [card for card
                           in cards_in_supply_costing_less_than(game_state, effect.value)
@@ -508,14 +509,14 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
         if len(gainable_cards) == 0:
             single_choice = [Choice(game_state=game_state,
                                     description=f"gain nothing since no treasures in supply cost {effect.value} or less")]
-            return offer_choice(game_state, single_choice, current_player_chooser)
+            return offer_choice(game_state, single_choice, current_player_chooser, current_player_index)
         choices = gainable_cards_to_hand_to_choices(game_state, gainable_cards, "gain")
-        return offer_choice(game_state, choices, current_player_chooser)
+        return offer_choice(game_state, choices, current_player_chooser, current_player_index)
     elif effect.name == EFFECT_NAME.TRASH_GAIN_A_CARD_COSTING_UP_TO_X_MORE:
         if len(hand) == 0:
             single_choice = [Choice(game_state=game_state,
                                     description="trash and gain nothing since there are no cards in your hand")]
-            return offer_choice(game_state, single_choice, current_player_chooser)
+            return offer_choice(game_state, single_choice, current_player_chooser, current_player_index)
 
         choices = []
         for card, freq in hand.items():
@@ -524,7 +525,7 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
             new_game_state = new_game_state.replace_current_player_kwargs(hand=remove_card(hand, card))
             choices.append(Choice(game_state=new_game_state,
                                   description=f"trash {card.name}"))
-        return offer_choice(game_state, choices, current_player_chooser)
+        return offer_choice(game_state, choices, current_player_chooser, current_player_index)
     elif effect.name == EFFECT_NAME.MAY_TRASH_TREASURE_GAIN_TREASURE_TO_HAND_COSTING_UP_TO_X_MORE:
         choices = [Choice(game_state=game_state, description="trash nothing")]
 
@@ -534,7 +535,7 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
             new_game_state = new_game_state.replace_current_player_kwargs(hand=remove_card(hand, card))
             choices.append(Choice(game_state=new_game_state,
                                   description=f"trash {card.name}"))
-        return offer_choice(game_state, choices, current_player_chooser)
+        return offer_choice(game_state, choices, current_player_chooser, current_player_index)
 
     elif effect.name == EFFECT_NAME.DISCARD_ANY_NUMBER_THEN_DRAW_THAT_MANY:
         # Iterate over every card, including duplicatest
@@ -543,7 +544,7 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
                                           .prepend_effect(Effect(EFFECT_NAME.DRAW_CARDS, 1)))
             choices = [Choice(game_state=discard_to_draw_game_state, description=f"discard {card.name} to draw a card"),
                        Choice(game_state=game_state, description=f"don't discard {card.name}")]
-            game_state = offer_choice(game_state, choices, current_player_chooser)
+            game_state = offer_choice(game_state, choices, current_player_chooser, current_player_index)
         return game_state
     elif effect.name == EFFECT_NAME.MAY_PUT_ANY_CARD_FROM_DISCARD_PILE_ONTO_DECK:
         choices = [Choice(game_state=game_state, description="do not put a card from discard pile onto deck")]
@@ -553,7 +554,7 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
             card_onto_deck_game_state = game_state.replace_current_player(new_current_player)
             choices.append(Choice(game_state=card_onto_deck_game_state,
                                   description=f"put {card.name} from discard pile on top of your deck"))
-        return offer_choice(game_state, choices, current_player_chooser)
+        return offer_choice(game_state, choices, current_player_chooser, current_player_index)
 
     elif effect.name == EFFECT_NAME.MAY_TRASH_A_COPPER_TO_PRODUCE_MONEY:
         choices = [Choice(game_state=game_state, description="Trash nothing")]
@@ -563,7 +564,7 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
                               .replace_current_player_kwargs(hand=remove_card(hand, copper))
                               .prepend_effect(Effect(EFFECT_NAME.PRODUCE_MONEY, effect.value)))
             choices.append(Choice(game_state=new_game_state, description="Trash a copper for 3 money"))
-        return offer_choice(game_state, choices, current_player_chooser)
+        return offer_choice(game_state, choices, current_player_chooser, current_player_index)
 
     elif effect.name == EFFECT_NAME.EACH_OTHER_PLAYER_DRAWS_A_CARD:
         new_players = [(p if index == game_state.current_player_index else draw_card(p))
@@ -580,7 +581,8 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
             while len(game_state.players[other_player_index].hand) > effect.value:
                 game_state = offer_choice(game_state,
                                           player_index_discards_one_card_choices(game_state, other_player_index),
-                                          choosers[other_player_index])
+                                          choosers[other_player_index],
+                                          other_player_index)
         return game_state
     else:
         raise ValueError("resolve_pending_effect does not support effect named '{effec.name}'")
@@ -714,33 +716,33 @@ def game_completed(game_state: GameState) -> bool:
     return (num_empty_piles >= 3
             or num_copies_of_card(game_state.supply, "province") == 0)
 
-def offer_choice(game_state, choices, chooser) -> GameState:
-    # ASSUMPTION: the choice is being made by the current player
-    current_player_name = game_state.current_player().name
+def offer_choice(game_state, choices, chooser, player_index_making_choice: int) -> GameState:
+    player_name = game_state.players[player_index_making_choice].name
     if len(choices) == 1:
-        print(f"{current_player_name}: {choices[0].description}")
+        print(f"{player_name}: {choices[0].description}")
         return choices[0].game_state
 
     # Keeping game_state as an argument, even though it may not be needed by value function approximation
     selected_choice_index = chooser(game_state, choices)
     selected_choice = choices[selected_choice_index]
-    print(f"{current_player_name}: {selected_choice.description}")
+    print(f"{player_name}: {selected_choice.description}")
     return selected_choice.game_state
 
 def game_step(game_state: GameState, choosers: List) -> GameState:
-    current_player_chooser = choosers[game_state.current_player_index]
+    current_player_index = game_state.current_player_index
+    current_player_chooser = choosers[current_player_index]
 
     if len(game_state.pending_effects) > 0:
         return resolve_pending_effect(game_state, choosers)
     elif game_state.turn_phase == TURN_PHASES.ACTION:
         choices = action_phase_choices(game_state)
-        return offer_choice(game_state, choices, current_player_chooser)
+        return offer_choice(game_state, choices, current_player_chooser, current_player_index)
     elif game_state.turn_phase == TURN_PHASES.TREASURE:
         choices = treasure_phase_choices(game_state)
-        return offer_choice(game_state, choices, current_player_chooser)
+        return offer_choice(game_state, choices, current_player_chooser, current_player_index)
     elif game_state.turn_phase == TURN_PHASES.BUY:
         choices = buy_phase_choices(game_state)
-        return offer_choice(game_state, choices, current_player_chooser)
+        return offer_choice(game_state, choices, current_player_chooser, current_player_index)
     elif game_state.turn_phase == TURN_PHASES.CLEANUP:
         return do_cleanup_phase(game_state)
     else:
