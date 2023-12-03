@@ -1,7 +1,7 @@
 import random
 
 from multiset import Multiset
-from typing import NamedTuple, Tuple, List, Dict, Set
+from typing import NamedTuple, Tuple, List, Dict, Set, Optional, Sequence
 
 
 # TODO: make this a proper Python enum
@@ -9,6 +9,7 @@ class EFFECT_NAME:
     DRAW_CARDS = "draw_cards"
     PLUS_ACTIONS = "plus_actions"
     PLUS_BUYS = "plus_buys"
+    GAIN_A_GOLD = "gain_a_gold"
     MAY_TRASH_A_CARD_FROM_YOUR_HAND = "may_trash_a_card_from_your_hand"
     GAIN_A_CARD_COSTING_UP_TO = "gain_a_card_costing_up_to"
     GAIN_A_TREASURE_TO_HAND_COSTING_UP_TO = "gain_a_treasure_to_hand_costing_up_to"
@@ -20,6 +21,7 @@ class EFFECT_NAME:
     EACH_OTHER_PLAYER_DRAWS_A_CARD = "each_other_player_draws_a_card"
     EACH_OTHER_PLAYER_GAINS_A_CURSE = "each_other_player_gains_a_curse"
     EACH_OTHER_PLAYER_DISCARDS_DOWN_TO = "each_other_player_discards_down_to"
+    EACH_OTHER_PLAYER_BANDIT_EFFECT = "each_other_player_bandit_effect"
 
     PRODUCE_MONEY = "produce_money"
     VP = "vp"
@@ -181,6 +183,8 @@ CARD_DEFS = {
                                                              Effect(EFFECT_NAME.EACH_OTHER_PLAYER_GAINS_A_CURSE, None))),
     "militia": make_card(name="militia", cost=4, action_effects=(Effect(EFFECT_NAME.PRODUCE_MONEY, 2),
                                                                  Effect(EFFECT_NAME.EACH_OTHER_PLAYER_DISCARDS_DOWN_TO, 3))),
+    "bandit": make_card(name="bandit", cost=5, action_effects=(Effect(EFFECT_NAME.GAIN_A_GOLD, None),
+                                                               Effect(EFFECT_NAME.EACH_OTHER_PLAYER_BANDIT_EFFECT, None))),
     # {"name": "Bandit",       "cost": 5, "type": "action", @"gain a gold. each other player reveals the top 2 cards of their deck, trashes a revealed treasure other than copper, and discards the rest"
     # {"name": "Bureaucrat",   "cost": 4, "type": "action", @"gain a silver onto your deck. each other player reveals a victory card from their hand it puts it onto their deck (or reveals a hand with no victory cards)"
     # {"name": "Moat",         "cost": 2, "type": "action", EFFECT_NAME.DRAW_CARDS: 2, "moat_effect": 1,
@@ -225,6 +229,9 @@ def add_card_counts(card_counts_lhs: CardCounts, card_counts_rhs: CardCounts) ->
 
 def is_treasure(card: Card) -> bool:
     return len(card.treasure_effects) > 0
+
+def is_treasure_other_than_a_copper(card: Card) -> bool:
+    return is_treasure(card) and card != card_name_to_card("copper")
 
 def money_from_treasures(card_counts: CardCounts) -> int:
     total = 0
@@ -286,6 +293,12 @@ def dict_to_card_counts(card_names_dict: Dict[str, int]) -> CardCounts:
     for card_name, card_occurrences in card_names_dict.items():
         result[card_name_to_card(card_name)] = card_occurrences
     return result
+
+def card_sequence_to_card_counts(cards: Sequence[Card]) -> CardCounts:
+    card_counts = empty_card_counts()
+    for card in cards:
+        card_counts = add_card(card_counts, card)
+    return card_counts
 
 def unique_cards(card_counts: CardCounts) -> Set[Card]:
     # For some reason .key() didn't work, even though it's described here: https://pythonhosted.org/multiset/
@@ -356,14 +369,14 @@ def buy_phase_choices(buy_game_state: GameState) -> List[Choice]:
 def add_card_to_top_of_deck(player: Player, card: Card) -> Player:
     return player._replace(top_of_deck=(card,) + player.top_of_deck)
 
-def draw_card(player: Player) -> Player:
+def take_top_card_off_of_deck(player: Player) -> Tuple[Player, Optional[Card]]:
     if len(player.top_of_deck) == 0 and num_cards(player.deck) == 0 and num_cards(player.discard_pile) == 0:
-        return player
+        return player, None
 
     if len(player.top_of_deck) > 0:
-        player = player._replace(hand=add_card(player.hand, player.top_of_deck[0]),
-                                 top_of_deck=player.top_of_deck[1:])
-        return player
+        card_taken = player.top_of_deck[0]
+        player = player._replace(top_of_deck=player.top_of_deck[1:])
+        return player, card_taken
 
     if len(player.top_of_deck) == 0 and num_cards(player.deck) == 0:
         player = player._replace(deck=player.discard_pile,
@@ -372,11 +385,17 @@ def draw_card(player: Player) -> Player:
     deck = player.deck
     unique_cards, frequencies = zip(*deck.items())
 
-    card_drawn = random.choices(unique_cards, weights=frequencies, k=1)[0]
-    player = player._replace(hand=add_card(player.hand, card_drawn),
-                             deck=remove_card(deck, card_drawn))
+    card_taken = random.choices(unique_cards, weights=frequencies, k=1)[0]
+    player = player._replace(deck=remove_card(deck, card_taken))
 
-    return player
+    return player, card_taken
+
+def draw_card(player: Player) -> Player:
+    player, card_drawn = take_top_card_off_of_deck(player)
+    if card_drawn is not None:
+        return player._replace(hand=add_card(player.hand, card_drawn))
+    else:
+        return player
 
 def discard_specific_card_current_player(game_state: GameState, card_discarded: Card) -> GameState:
     player = game_state.current_player()
@@ -481,6 +500,8 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
         return game_state._replace(total_money=game_state.total_money + effect.value)
     elif effect.name == EFFECT_NAME.PLUS_BUYS:
         return game_state._replace(buys=game_state.buys + effect.value)
+    elif effect.name == EFFECT_NAME.GAIN_A_GOLD:
+        return gain_card_current_player(game_state, card_name_to_card("gold"))
     elif effect.name == EFFECT_NAME.MAY_TRASH_A_CARD_FROM_YOUR_HAND:
         trash_nothing = Choice(game_state=game_state, description="trash nothing")
         choices = [trash_nothing]
@@ -579,11 +600,59 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
     elif effect.name == EFFECT_NAME.EACH_OTHER_PLAYER_DISCARDS_DOWN_TO:
         for other_player_index in non_current_player_indices(game_state):
             while len(game_state.players[other_player_index].hand) > effect.value:
+                # TODO: Does game_state need to be rotated to enable the other chooser to see itself as the current player?
                 game_state = offer_choice(game_state,
                                           player_index_discards_one_card_choices(game_state, other_player_index),
                                           choosers[other_player_index],
                                           other_player_index)
         return game_state
+    elif effect.name == EFFECT_NAME.EACH_OTHER_PLAYER_BANDIT_EFFECT:
+        # each other player reveals the top 2 cards of their deck, trashes a
+        # revealed treasure other than copper, and discards the rest
+        for other_player_index in non_current_player_indices(game_state):
+            other_player = game_state.players[other_player_index]
+            other_player, first_card = take_top_card_off_of_deck(other_player)
+            other_player, second_card = take_top_card_off_of_deck(other_player)
+            revealed_cards_list = [card for card in [first_card, second_card] if card is not None]
+            revealed_cards_is_treasure_other_than_a_copper = [is_treasure_other_than_a_copper(c) for c in revealed_cards_list]
+            if not any(revealed_cards_is_treasure_other_than_a_copper):
+                # Put all cards that were revealed into the discard pile. It's possible that 0, 1, or 2 cards were revealed, but none should be trashed.
+                revealed_card_counts = card_sequence_to_card_counts(revealed_cards_list)
+                game_state = game_state.replace_player_by_index(other_player_index,
+                                                                other_player._replace(discard_pile=add_card_counts(other_player.discard_pile, revealed_card_counts)))
+            elif revealed_cards_is_treasure_other_than_a_copper == [True]:
+                # We took one treasure other than a copper off the deck and didn't have another card to take.
+                # The card was removed from the deck already ("trashed").
+                game_state = game_state.replace_player_by_index(other_player_index, other_player)
+            elif revealed_cards_is_treasure_other_than_a_copper == [True, False]:
+                # Trash the first card, they get the second card back.
+                game_state = game_state.replace_player_by_index(other_player_index,
+                                                                other_player._replace(discard_pile=add_card(other_player.discard_pile, second_card)))
+            elif revealed_cards_is_treasure_other_than_a_copper == [False, True]:
+                # Trash the second card, they get the first card back.
+                game_state = game_state.replace_player_by_index(other_player_index,
+                                                                other_player._replace(discard_pile=add_card(other_player.discard_pile, first_card)))
+            elif revealed_cards_is_treasure_other_than_a_copper == [True, True]:
+                keep_first_card_discard_pile = add_card(other_player.discard_pile, first_card)
+                keep_second_card_discard_pile = add_card(other_player.discard_pile, second_card)
+
+                choices = [Choice(game_state.replace_player_by_index(other_player_index,
+                                                                     other_player._replace(discard_pile=add_card(other_player.discard_pile, first_card))),
+                                  description=f"keep {first_card.name}, trash {second_card.name}"),
+                           Choice(game_state.replace_player_by_index(other_player_index,
+                                                                     other_player._replace(discard_pile=add_card(other_player.discard_pile, second_card))),
+                                  description=f"keep {second_card.name}, trash {first_card.name}")]
+
+                game_state = offer_choice(game_state,
+                                          choices,
+                                          choosers[other_player_index],
+                                          other_player_index)
+            else:
+                assert False
+            return game_state
+
+
+
     else:
         raise ValueError("resolve_pending_effect does not support effect named '{effec.name}'")
 
@@ -689,6 +758,7 @@ def initial_supply(num_players: int) -> Dict[str, int]:
     card_dict["council room"] = 10
     card_dict["witch"] = 10
     card_dict["militia"] = 10
+    card_dict["bandit"] = 10
     return card_dict
 
 def initial_game_state(player_names: List[str]) -> GameState:
