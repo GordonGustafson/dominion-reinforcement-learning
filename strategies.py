@@ -9,8 +9,11 @@ def read_int_from_stdin() -> int:
 
 def user_chooser(game_state: GameState, choices: List[Choice]) -> int:
     player = game_state.current_player()
-    print(f"money: {game_state.total_money}, actions: {game_state.actions}, hand: {card_counts_to_dict(player.hand)}")
-    print(f"deck: {card_counts_to_dict(player.deck)}, discard pile: {card_counts_to_dict(player.discard_pile)}, top of deck: {player.top_of_deck}")
+    # HACK: assumes only one opponent
+    opponent = game_state.players[non_current_player_indices(game_state)[0]]
+    print(f"{opponent.name} hand: {card_counts_to_dict(opponent.hand)}, deck: {card_counts_to_dict(opponent.deck)}, discard pile: {card_counts_to_dict(opponent.discard_pile)}, top of deck: {opponent.top_of_deck}")
+    print(f"{player.name} hand: {card_counts_to_dict(player.hand)}, deck: {card_counts_to_dict(player.deck)}, discard pile: {card_counts_to_dict(player.discard_pile)}, top of deck: {player.top_of_deck}")
+    print(f"{player.name} money: {game_state.total_money}, actions: {game_state.actions}, hand: {card_counts_to_dict(player.hand)}")
     for i, choice in enumerate(choices):
         print(f"{i}: {choice.description}")
 
