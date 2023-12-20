@@ -185,7 +185,6 @@ CARD_DEFS = {
                                                                  Effect(EFFECT_NAME.EACH_OTHER_PLAYER_DISCARDS_DOWN_TO, 3))),
     "bandit": make_card(name="bandit", cost=5, action_effects=(Effect(EFFECT_NAME.GAIN_A_GOLD, None),
                                                                Effect(EFFECT_NAME.EACH_OTHER_PLAYER_BANDIT_EFFECT, None))),
-    # {"name": "Bandit",       "cost": 5, "type": "action", @"gain a gold. each other player reveals the top 2 cards of their deck, trashes a revealed treasure other than copper, and discards the rest"
     # {"name": "Bureaucrat",   "cost": 4, "type": "action", @"gain a silver onto your deck. each other player reveals a victory card from their hand it puts it onto their deck (or reveals a hand with no victory cards)"
     # {"name": "Moat",         "cost": 2, "type": "action", EFFECT_NAME.DRAW_CARDS: 2, "moat_effect": 1,
 
@@ -793,7 +792,7 @@ def offer_choice(game_state, choices, chooser, player_index_making_choice: int) 
         return choices[0].game_state
 
     # Keeping game_state as an argument, even though it may not be needed by value function approximation
-    selected_choice_index = chooser(game_state, choices)
+    selected_choice_index = chooser.make_choice(game_state, choices)
     selected_choice = choices[selected_choice_index]
     print(f"{player_name}: {selected_choice.description}")
     return selected_choice.game_state
