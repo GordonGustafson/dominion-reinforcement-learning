@@ -820,11 +820,37 @@ def game_step(game_state: GameState, choosers: List) -> GameState:
 def game_flow(player_names: List[str], choosers: List):
     game_state = initial_game_state(player_names)
 
-    while not game_completed(game_state):
+    while not game_completed(game_state) or game_state.turn_phase != TURN_PHASES.CLEANUP:
         game_state = game_step(game_state, choosers)
 
     print("----------------------------")
     for i, player in enumerate(game_state.players):
         print(f"{player.name} score: {total_player_vp(player)}")
 
+    # Hardcoding logic to assume two players for now. With three there can be
+    # two players that draw and one that loses.
+    player_vps = [total_player_vp(player) for player in game_state.players]
+    # We end the game before `do_cleanup_phase` rotates the current player, so
+    # game_state.current_player_index had the last turn.
+    players_had_equal_number_of_turns = game_state.current_player_index == 1
+    if player_vps[0] == player_vps[1] and players_had_equal_number_of_turns:
+        print("GAME OUTPUT: DRAW")
+        choosers[0].record_draw()
+        choosers[1].record_draw()
+    elif player_vps[0] == player_vps[1] and not players_had_equal_number_of_turns:
+        print(f"GAME OUTPUT: {game_state.players[1].name} WINS BY TIE-BREAKER")
+        choosers[0].record_loss()
+        choosers[1].record_win()
+    elif player_vps[1] > player_vps[0]:
+        print("GAME OUTPUT: {game_state.players[1].name} WINS")
+        choosers[0].record_loss()
+        choosers[1].record_win()
+    elif player_vps[0] > player_vps[1]:
+        print("GAME OUTPUT: {game_state.players[0].name} WINS")
+        choosers[0].record_win()
+        choosers[1].record_loss()
+    else:
+        assert False
+
     print(f"max turns per player: {game_state.max_turns_per_player}")
+

@@ -6,6 +6,7 @@ from typing import NamedTuple, List, Optional, Union
 class GAME_OUTCOME:
     WIN = "WIN"
     LOSS = "LOSS"
+    DRAW = "DRAW"
 
 GameOutcome = Union[GAME_OUTCOME.WIN, GAME_OUTCOME.LOSS]
 
@@ -36,3 +37,6 @@ class Chooser(object):
 
     def record_loss(self):
         self._game_outcome = GAME_OUTCOME.LOSS
+
+    def record_draw(self):
+        self._game_outcome = GAME_OUTCOME.DRAW
