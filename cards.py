@@ -865,11 +865,11 @@ def game_flow(player_names: List[str], choosers: List):
         choosers[0]._game_outcome = GAME_OUTCOME.LOSS
         choosers[1]._game_outcome = GAME_OUTCOME.WIN
     elif player_vps[1] > player_vps[0]:
-        print("GAME OUTPUT: {game_state.players[1].name} WINS")
-        choosers[0]._game_outcome = GAME_OUTCOME.WIN
-        choosers[1]._game_outcome = GAME_OUTCOME.LOSS
+        print(f"GAME OUTPUT: {game_state.players[1].name} WINS")
+        choosers[0]._game_outcome = GAME_OUTCOME.LOSS
+        choosers[1]._game_outcome = GAME_OUTCOME.WIN
     elif player_vps[0] > player_vps[1]:
-        print("GAME OUTPUT: {game_state.players[0].name} WINS")
+        print(f"GAME OUTPUT: {game_state.players[0].name} WINS")
         choosers[0]._game_outcome = GAME_OUTCOME.WIN
         choosers[1]._game_outcome = GAME_OUTCOME.LOSS
     else:
