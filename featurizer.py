@@ -34,5 +34,6 @@ def game_state_to_vector(game_state: GameState):
 def player_to_vector(player: Player) -> np.ndarray:
     total_vp = get_total_player_vp(player)
     average_treasure_value = get_average_treasure_value_per_card(player)
+    num_cards = len(get_all_player_cards(player))
 
-    return np.array([float(total_vp), average_treasure_value])
+    return np.array([float(total_vp), average_treasure_value, num_cards])
