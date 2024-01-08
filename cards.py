@@ -1,7 +1,7 @@
 import random
 
 from multiset import Multiset
-from typing import NamedTuple, Tuple, List, Dict, Set, Optional, Sequence
+from typing import NamedTuple, Tuple, List, Dict, Set, Optional, Sequence, Union
 
 
 # TODO: make this a proper Python enum
@@ -120,6 +120,22 @@ Choice = NamedTuple("Choice", [
     ("game_state", GameState),
     ("description", str),
 ])
+
+
+StateActionPair = NamedTuple("StateActionPair", [
+    ("state", GameState),
+    ("possible_actions", List[Choice]),
+    ("selected_action", int),
+])
+
+# TODO: make this a proper Python enum
+class GAME_OUTCOME:
+    WIN = "WIN"
+    LOSS = "LOSS"
+    DRAW = "DRAW"
+
+GameOutcome = Union[GAME_OUTCOME.WIN, GAME_OUTCOME.LOSS, GAME_OUTCOME.DRAW]
+
 
 # TODO: should we use the same "money_produced" field for both treasures and actions?
 CARD_DEFS = {
@@ -250,12 +266,19 @@ def vp_total(card_counts: CardCounts) -> int:
 
     return total
 
-def total_player_vp(player: Player) -> int:
-    return vp_total(player.hand) + vp_total(player.deck) + vp_total(player.discard_pile)
+def get_all_player_cards(player: Player) -> CardCounts:
+    all_cards = player.hand + player.deck + player.played_actions + player.discard_pile
+    for card in player.top_of_deck:
+        all_cards = add_card(all_cards, card)
+    return all_cards
 
-def average_treasure_value_per_card(player: Player) -> float:
-    player_treasure_total = money_from_treasures(player.hand) + money_from_treasures(player.deck) + money_from_treasures(player.discard_pile)
-    player_card_total = num_cards(player.hand) + num_cards(player.deck) + num_cards(player.discard_pile)
+def get_total_player_vp(player: Player) -> int:
+    return vp_total(get_all_player_cards(player))
+
+def get_average_treasure_value_per_card(player: Player) -> float:
+    all_player_cards = get_all_player_cards(player)
+    player_treasure_total = money_from_treasures(all_player_cards)
+    player_card_total = num_cards(all_player_cards)
     return player_treasure_total / player_card_total
 
 def non_current_player_indices(game_state: GameState):
@@ -533,7 +556,7 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
         choices = gainable_cards_to_hand_to_choices(game_state, gainable_cards, "gain")
         return offer_choice(game_state, choices, current_player_chooser, current_player_index)
     elif effect.name == EFFECT_NAME.TRASH_GAIN_A_CARD_COSTING_UP_TO_X_MORE:
-        if len(hand) == 0:
+        if num_cards(hand) == 0:
             single_choice = [Choice(game_state=game_state,
                                     description="trash and gain nothing since there are no cards in your hand")]
             return offer_choice(game_state, single_choice, current_player_chooser, current_player_index)
@@ -598,7 +621,7 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
         return game_state
     elif effect.name == EFFECT_NAME.EACH_OTHER_PLAYER_DISCARDS_DOWN_TO:
         for other_player_index in non_current_player_indices(game_state):
-            while len(game_state.players[other_player_index].hand) > effect.value:
+            while num_cards(game_state.players[other_player_index].hand) > effect.value:
                 # TODO: Does game_state need to be rotated to enable the other chooser to see itself as the current player?
                 game_state = offer_choice(game_state,
                                           player_index_discards_one_card_choices(game_state, other_player_index),
@@ -825,32 +848,31 @@ def game_flow(player_names: List[str], choosers: List):
 
     print("----------------------------")
     for i, player in enumerate(game_state.players):
-        print(f"{player.name} score: {total_player_vp(player)}")
+        print(f"{player.name} score: {get_total_player_vp(player)}")
 
     # Hardcoding logic to assume two players for now. With three there can be
     # two players that draw and one that loses.
-    player_vps = [total_player_vp(player) for player in game_state.players]
+    player_vps = [get_total_player_vp(player) for player in game_state.players]
     # We end the game before `do_cleanup_phase` rotates the current player, so
     # game_state.current_player_index had the last turn.
     players_had_equal_number_of_turns = game_state.current_player_index == 1
     if player_vps[0] == player_vps[1] and players_had_equal_number_of_turns:
         print("GAME OUTPUT: DRAW")
-        choosers[0].record_draw()
-        choosers[1].record_draw()
+        choosers[0]._game_outcome = GAME_OUTCOME.DRAW
+        choosers[1]._game_outcome = GAME_OUTCOME.DRAW
     elif player_vps[0] == player_vps[1] and not players_had_equal_number_of_turns:
         print(f"GAME OUTPUT: {game_state.players[1].name} WINS BY TIE-BREAKER")
-        choosers[0].record_loss()
-        choosers[1].record_win()
+        choosers[0]._game_outcome = GAME_OUTCOME.LOSS
+        choosers[1]._game_outcome = GAME_OUTCOME.WIN
     elif player_vps[1] > player_vps[0]:
         print("GAME OUTPUT: {game_state.players[1].name} WINS")
-        choosers[0].record_loss()
-        choosers[1].record_win()
+        choosers[0]._game_outcome = GAME_OUTCOME.WIN
+        choosers[1]._game_outcome = GAME_OUTCOME.LOSS
     elif player_vps[0] > player_vps[1]:
         print("GAME OUTPUT: {game_state.players[0].name} WINS")
-        choosers[0].record_win()
-        choosers[1].record_loss()
+        choosers[0]._game_outcome = GAME_OUTCOME.WIN
+        choosers[1]._game_outcome = GAME_OUTCOME.LOSS
     else:
         assert False
 
     print(f"max turns per player: {game_state.max_turns_per_player}")
-

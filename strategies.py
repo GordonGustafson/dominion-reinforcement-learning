@@ -25,8 +25,8 @@ def user_chooser(game_state: GameState, choices: List[Choice]) -> int:
     return int(selected_choice)
 
 def big_money_until_province_then_all_victory(game_state: GameState, choices: List[Choice]) -> int:
-    current_vp = total_player_vp(game_state.current_player())
-    choice_delta_vps = [total_player_vp(choice.game_state.current_player()) - current_vp
+    current_vp = get_total_player_vp(game_state.current_player())
+    choice_delta_vps = [get_total_player_vp(choice.game_state.current_player()) - current_vp
                         for choice in choices]
     max_delta_vp = max(choice_delta_vps)
 
@@ -37,12 +37,12 @@ def big_money_until_province_then_all_victory(game_state: GameState, choices: Li
     # otherwise, maximize our average treasure value per card we have
     choice_with_best_average_treasure_value = (
         max(choices,
-            key=lambda c: average_treasure_value_per_card(c.game_state.current_player())))
+            key=lambda c: get_average_treasure_value_per_card(c.game_state.current_player())))
     return choices.index(choice_with_best_average_treasure_value)
 
 def big_money_provinces_only(game_state: GameState, choices: List[Choice]) -> int:
-    current_vp = total_player_vp(game_state.current_player())
-    choice_delta_vps = [total_player_vp(choice.game_state.current_player()) - current_vp
+    current_vp = get_total_player_vp(game_state.current_player())
+    choice_delta_vps = [get_total_player_vp(choice.game_state.current_player()) - current_vp
                         for choice in choices]
     max_delta_vp = max(choice_delta_vps)
 
@@ -53,5 +53,5 @@ def big_money_provinces_only(game_state: GameState, choices: List[Choice]) -> in
     # otherwise, maximize our average treasure value per card we have
     choice_with_best_average_treasure_value = (
         max(choices,
-            key=lambda c: average_treasure_value_per_card(c.game_state.current_player())))
+            key=lambda c: get_average_treasure_value_per_card(c.game_state.current_player())))
     return choices.index(choice_with_best_average_treasure_value)

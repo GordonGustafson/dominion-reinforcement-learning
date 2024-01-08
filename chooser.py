@@ -1,20 +1,6 @@
 from cards import *
 
-from typing import NamedTuple, List, Optional, Union
-
-# TODO: make this a proper Python enum
-class GAME_OUTCOME:
-    WIN = "WIN"
-    LOSS = "LOSS"
-    DRAW = "DRAW"
-
-GameOutcome = Union[GAME_OUTCOME.WIN, GAME_OUTCOME.LOSS]
-
-StateActionPair = NamedTuple("StateActionPair", [
-    ("state", GameState),
-    ("possible_actions", List[Choice]),
-    ("selected_action", int),
-])
+from typing import List, Optional
 
 class Chooser(object):
     def __init__(self, chooser_func):
@@ -31,12 +17,3 @@ class Chooser(object):
         self._state_action_pairs.append(state_action_pair)
 
         return selected_action
-
-    def record_win(self):
-        self._game_outcome = GAME_OUTCOME.WIN
-
-    def record_loss(self):
-        self._game_outcome = GAME_OUTCOME.LOSS
-
-    def record_draw(self):
-        self._game_outcome = GAME_OUTCOME.DRAW
