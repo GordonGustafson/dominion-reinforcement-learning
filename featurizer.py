@@ -28,12 +28,18 @@ def game_history_to_df(state_action_pairs: List[StateActionPair],
 
 
 def game_state_to_vector(game_state: GameState):
+    # TODO: make this reflect the appropriate player's perspective.
+    player_0_vp_lead = (get_total_player_vp(game_state.players[0])
+                        - get_total_player_vp(game_state.players[1]))
+    num_provinces = num_copies_of_card(game_state.supply, "province")
+
+    non_player_state_vector = np.array([player_0_vp_lead, num_provinces], dtype=np.float32)
+
     player_vectors = [player_to_vector(p) for p in game_state.players]
-    return np.concatenate(player_vectors, axis=0)
+    return np.concatenate([non_player_state_vector] + player_vectors, axis=0)
 
 def player_to_vector(player: Player) -> np.ndarray:
-    total_vp = get_total_player_vp(player)
     average_treasure_value = get_average_treasure_value_per_card(player)
-    num_cards = len(get_all_player_cards(player))
+    # num_cards = len(get_all_player_cards(player))
 
-    return np.array([float(total_vp), average_treasure_value, num_cards])
+    return np.array([average_treasure_value])

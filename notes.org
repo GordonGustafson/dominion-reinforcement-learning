@@ -1,0 +1,227 @@
+* TODO implement picking 10 random kingdom cards
+* TODO fix bug where game doesn't end if 3 piles are bought out
+potentially introduced during switch from dict to Multiset for CardCounts
+
+* cards
+** easy to add
+    # {"name": "Poacher",      "cost": 4, "type": "action", EFFECT_NAME.DRAW_CARDS: 1, "actions": 1, @"+1$, discard a card per empty supply pile"
+    # {"name": "Gardens",      "cost": 4, "type": "victory", @"worth 1 vp per 10 cards you have (rounded down)"
+    # {"name": "Throne Room",  "cost": 4, "type": "action", @"you may play an action card from your hand twice"
+    # {"name": "Vassal",       "cost": 3, "type": "action", "money_produced": 2, "Discard_the_top_card_of_your_deck_if_it's_an_action_card,_you_may_play_it": 1,
+    # {"name": "Artisan",      "cost": 6, "type": "action", @"gain a card to your hand costing up to $5. put a card from your hand onto your deck"
+** hard to add
+    # {"name": "Merchant",     "cost": 3, "type": "action", EFFECT_NAME.DRAW_CARDS: 1, "actions": 1, "the_first_time_you_play_a_silver_this_turn_+1_money": 1,
+    # {"name": "Sentry",       "cost": 5, "type": "action", "actions": 1, @"+1 card . Look at the top 2 cards of your deck. Trash and/or discard any number of them, put the rest back on top in any order"
+    # {"name": "Bureaucrat",   "cost": 4, "type": "action", @"gain a silver onto your deck. each other player reveals a victory card from their hand it puts it onto their deck (or reveals a hand with no victory cards)"
+    # {"name": "Library",      "cost": 5, "type": "action", @"draw until you have 7 cards in hand, skipping any action cards you choose to. Set those aside, discarding them afterwards"
+    # {"name": "Moat",         "cost": 2, "type": "action", EFFECT_NAME.DRAW_CARDS: 2, "moat_effect": 1,
+
+
+* cards that interact with top of deck
+    [3, 0, 0, "Harbinger",    "+1 card, +1 action. Look through your discard pile. you may puta card fram it onto your deck"
+    [5, 0, 0, "Sentry",       "+1 card +1 action. Look at the top 2 cards of your deck. Trash and/or discard any number of them, put the rest back on top in any order"
+    [4, 0, 0, "Bureaucrat",   "gain a silver onto your deck. each other player reveals a victory card from their hand it puts it onto their deck (or reveals a hand with no victory cards)"
+
+* scratch code
+    def non_current_players(self) -> List[Player]:
+        result = self.players.copy()
+        result.remove(self.current_player())
+        return result
+
+
+    def test_non_current_players(self):
+        game_state = make_game_state(turn_phase=TURN_PHASES.CLEANUP,
+                                     current_player_index=1,
+                                     players=[make_player(name="player at index 0"),
+                                              make_player(name="player at index 1"),
+                                              make_player(name="player at index 2"),
+                                              make_player(name="player at index 3")])
+
+        expected_non_current_players = [make_player(name="player at index 0"),
+                                        make_player(name="player at index 2"),
+                                        make_player(name="player at index 3")]
+
+        self.assertEqual(game_state.non_current_players(), expected_non_current_players)
+
+
+* 
+
+card_counts must be a set
+
+a card must be addable and removable from card_counts
+
+must be able to retrieve vp, $, cost, and effects for any card
+
+
+
+* 
+    {"name": "Cellar",       "cost": 2, "actions": 1, "discard_any_number_then_draw_that_many": 1,
+    {"name": "Chapel",       "cost": 2, "trash_up_to_X_cards_from_your_hand": 4,
+    {"name": "Moat",         "cost": 2, "draw_cards": 2, "moat_effect": 1,
+    {"name": "Harbinger",    "cost": 3, "draw_cards": 1, "actions": 1, "put_any_card_from_discard_pile_onto_deck": 1,
+    {"name": "Merchant",     "cost": 3, "draw_cards": 1, "actions": 1, "the_first_time_you_play_a_silver_this_turn_+1_money": 1,
+    {"name": "Vassal",       "cost": 3, "money_produced": 2, "Discard_the_top_card_of_your_deck_if_it's_an_action_card,_you_may_play_it": 1,
+    {"name": "Village",      "cost": 3, "draw_cards": 1, "actions": 2,
+    {"name": "Workshop",     "cost": 3, @"gain_a_card_costing_up_to_4": 1
+    {"name": "Bureaucrat",   "cost": 4, @"gain a silver onto your deck. each other player reveals a victory card from their hand it puts it onto their deck (or reveals a hand with no victory cards)"
+    {"name": "Militia",      "cost": 4, @"+2$ each other player discards down to 3 cards in hand"
+    {"name": "Moneylender",  "cost": 4, @"you may trash a copper from your hand for +3$"
+    {"name": "Poacher",      "cost": 4, "draw_cards": 1, "actions": 1, @"+1$, discard a card per empty supply pile"
+    {"name": "Remodel",      "cost": 4, @"trash a card from your hand. gain a card costing up to 2 more than it"
+    {"name": "Smithy",       "cost": 4, "draw_cards": 3,
+    {"name": "Throne Room",  "cost": 4, @"you may play an action card from your hand twice"
+    {"name": "Bandit",       "cost": 5, @"gain a gold. each other player reveals the top 2 cards of their deck, trashes a revealed treasure other than copper, and discards the rest"
+    {"name": "Council Room", "cost": 5, "draw_cards": 4, @"+1 buy, each other player drawns a card"
+    {"name": "Festival",     "cost": 5, "actions": 2, @", +1 buy, +2$"
+    {"name": "Laboratory",   "cost": 5, "draw_cards": 2, "actions": 1,
+    {"name": "Library",      "cost": 5, @"draw until you have 7 cards in hand, skipping any action cards you choose to. Set those aside, discarding them afterwards"
+    {"name": "Market",       "cost": 5, "draw_cards": 1, "actions": 1, @"+1$ +1 buy"
+    {"name": "Mine",         "cost": 5, @"you may trash a treasure from your hand. gain a treasure to your hand costing up to $3 more than it"
+    {"name": "Sentry",       "cost": 5, "actions": 1, @"+1 card . Look at the top 2 cards of your deck. Trash and/or discard any number of them, put the rest back on top in any order"
+    {"name": "Witch",        "cost": 5, "draw_cards": 2, @"each other player gains a curse"
+    {"name": "Artisan",      "cost": 6, @"gain a card to your hand costing up to $5. put a card from your hand onto your deck"
+
+* 
+ |  fillna(self, value: 'object | ArrayLike | None' = None, method: 'FillnaOptions | None' = None, axis: 'Axis | None' = None, inplace: 'bool' = False, limit=None, downcast=None) -> 'DataFrame | None'
+ |      Fill NA/NaN values using the specified method.
+ |      
+ |      Parameters
+ |      ----------
+ |      value : scalar, dict, Series, or DataFrame
+ |          Value to use to fill holes (e.g. 0), alternately a
+ |          dict/Series/DataFrame of values specifying which value to use for
+ |          each index (for a Series) or column (for a DataFrame).  Values not
+ |          in the dict/Series/DataFrame will not be filled. This value cannot
+ |          be a list.
+ |      method : {'backfill', 'bfill', 'pad', 'ffill', None}, default None
+ |          Method to use for filling holes in reindexed Series
+ |          pad / ffill: propagate last valid observation forward to next valid
+ |          backfill / bfill: use next valid observation to fill gap.
+ |      axis : {0 or 'index', 1 or 'columns'}
+ |          Axis along which to fill missing values.
+ |      inplace : bool, default False
+ |          If True, fill in-place. Note: this will modify any
+ |          other views on this object (e.g., a no-copy slice for a column in a
+ |          DataFrame).
+ |      limit : int, default None
+ |          If method is specified, this is the maximum number of consecutive
+ |          NaN values to forward/backward fill. In other words, if there is
+ |          a gap with more than this number of consecutive NaNs, it will only
+ |          be partially filled. If method is not specified, this is the
+ |          maximum number of entries along the entire axis where NaNs will be
+ |          filled. Must be greater than 0 if not None.
+ |      downcast : dict, default is None
+ |          A dict of item->dtype of what to downcast if possible,
+ |          or the string 'infer' which will try to downcast to an appropriate
+ |          equal type (e.g. float64 to int64 if possible).
+ |      
+ |      Returns
+ |      -------
+ |      DataFrame or None
+ |          Object with missing values filled or None if ``inplace=True``.
+
+
+* 
+    [2, 0, 0, "Cellar",       "+1 action, discard any number then draw that many"
+    [2, 0, 0, "Chapel",       "trash up to 4 cards from your hand"
+    [2, 0, 0, "Moat",         "+2 cards, whenever another player plays an attack card, you may reveal this from your hand, to be unaffected by it"
+    [3, 0, 0, "Harbinger",    "+1 card, +1 action. Look through your discard pile. you may puta card fram it onto your deck"
+    [3, 0, 0, "Merchant",     "+1 card, +1 action the first time you play a silver this turn, +1 money"
+    [3, 0, 0, "Vassal",       "+2 money. Discard the top card of your deck. if it's an action card, you may play it"
+    [3, 0, 0, "Village",      "+1 card, +2 actions"
+    [3, 0, 0, "Workshop",     "gain a card costing up to 4"
+    [4, 0, 0, "Bureaucrat",   "gain a silver onto your deck. each other player reveals a victory card from their hand it puts it onto their deck (or reveals a hand with no victory cards)"
+    [4, 0, 0, "Gardens",      "worth 1 vp per 10 cards you have (rounded down)"
+    [4, 0, 0, "Militia",      "+2$ each other player discards down to 3 cards in hand"
+    [4, 0, 0, "Moneylender",  "you may trash a copper from your hand for +3$"
+    [4, 0, 0, "Poacher",      "+1 card +1 action +1$, discard a card per empty supply pile"
+    [4, 0, 0, "Remodel",      "trash a card from your hand. gain a card costing up to 2 more than it"
+    [4, 0, 0, "Smithy",       "+3 cards"
+    [4, 0, 0, "Throne Room",  "you may play an action card from your hand twice"
+    [5, 0, 0, "Bandit",       "gain a gold. each other player reveals the top 2 cards of their deck, trashes a revealed treasure other than copper, and discards the rest"
+    [5, 0, 0, "Council Room", "+4 cards +1 buy, each other player drawns a card"
+    [5, 0, 0, "Festival",     "+2 actions, +1 buy, +2$"
+    [5, 0, 0, "Laboratory",   "+2 cards, +1 action"
+    [5, 0, 0, "Library",      "draw until you have 7 cards in hand, skipping any action cards you choose to. Set those aside, discarding them afterwards"
+    [5, 0, 0, "Market",       "+1 card +1 action +1$ +1 buy"
+    [5, 0, 0, "Mine",         "you may trash a treasure from your hand. gain a treasure to your hand costing up to $3 more than it"
+    [5, 0, 0, "Sentry",       "+1 card +1 action. Look at the top 2 cards of your deck. Trash and/or discard any number of them, put the rest back on top in any order"
+    [5, 0, 0, "Witch",        "+2 cards, each other player gains a curse"
+    [6, 0, 0, "Artisan",      "gain a card to your hand costing up to $5. put a card from your hand onto your deck"
+
+
+
+* todos
+** TODO work through card implementation list
+** TODO do RL hw2
+
+* 
+def game_state_to_features(game_state: GameState):
+    pass
+    # total_victory_points =
+    # total_money_for_turn =
+
+
+24 Estates, 12 Duchies, 12 Provinces
+60 copper, 40 silver, 30 gold
+
+2 players: 8 of each Victory card and 10 Curse cards
+3 players: 12 of each Victory card and 20 Curse cards
+4 players: 12 of each Victory card and 30 Curse cards
+
+* 
+2 players	3 players	4 players
+copper	46	39	32
+silver	40	40	40
+gold	    30	30	30
+curse	    10	20	30
+estate	8	12	12
+duchy	    8	12	12
+province	8	12	12
+
+The game ends when either 3 Supply piles are empty, or when the Province pile or the Colony pile empties. The player with the most victory points wins.
+
+
+
+* dominion base second edition cards
+** $2 Cellar:         +1 action, discard any number then draw that many
+** $2 Chapel:         trash up to 4 cards from your hand
+** $2 Moat:           +2 cards, whenever another player plays an attack card, you may reveal this from your hand, to be unaffected by it
+** $3 Harbinger:      +1 card, + 1 action. Look through your discard pile. you may puta card fram it onto your deck
+** $3 Merchant:       +1 card, +1 action the first time you play a silver this turn, +1 money
+** $3 Vassal:         +2 money. Discard the top card of your deck. if it's an action card, you may play it
+** $3 Village:        +1 card, +2 actions
+** $3 Workshop:       gain a card costing up to 4
+** $4 Bureaucrat:     gain a silver onto your deck. each other player reveals a victory card from their hand it puts it onto their deck (or reveals a hand with no victory cards)
+** $4 Gardens:        worth 1 vp per 10 cards you have (rounded down)
+** $4 Militia:        +2$ each other player discards down to 3 cards in hand
+** $4 Moneylender:    you may trash a copper from your hand for +3$
+** $4 Poacher:        +1 card +1 action +1$, discard a card per empty supply pile
+** $4 Remodel:        trash a card from your hand. gain a card costing up to 2 more than it
+** $4 Smithy:         +3 cards
+** $4 Throne Room:    you may play an action card from your hand twice
+** $5 Bandit:         gain a gold. each other player reveals the top 2 cards of their deck, trashes a revealed treasure other than copper, and discards the rest
+** $5 Council Room:   +4 cards +1 buy, each other player drawns a card
+** $5 Festival:       +2 actions, +1 buy, +2$
+** $5 Laboratory:     +2 cards, +1 action
+** $5 Library:        draw until you have 7 cards in hand, skipping any action cards you choose to. Set those aside, discarding them afterwards
+** $5 Market:         +1 card +1 action +1$ +1 buy
+** $5 Mine:           you may trash a treasure from your hand. gain a treasure to your hand costing up to $3 more than it.
+** $5 Sentry:         +1 card +1 action. Look at the top 2 cards of your deck. Trash and/or discard any number of them, put the rest back on top in any order.
+** $5 Witch:          +2 cards, each other player gains a curse
+** $6 Artisan:        gain a card to your hand costing up to $5. put a card from your hand onto your deck.
+
+* delete me
+
+def num_provinces(player: Player) -> int:
+    return (num_copies_of_card(player.hand, "province")
+            + num_copies_of_card(player.deck, "province")
+            + num_copies_of_card(player.discard_pile, "province"))
+
+
+def test_num_provinces(self):
+    player = Player(hand=dict_to_card_counts({"estate": 2, "copper": 3, "province": 1}),
+                    deck=dict_to_card_counts({"copper": 4, "province": 2}),
+                    discard_pile=dict_to_card_counts({"province": 3}))
+
+    self.assertEqual(num_provinces(player), 6)
