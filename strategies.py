@@ -1,4 +1,9 @@
+import random
+
 from cards import *
+
+def random_strategy(game_state: GameState, choices: List[Choice]) -> int:
+    return random.randrange(len(choices))
 
 def read_int_from_stdin() -> int:
     input_string = input()

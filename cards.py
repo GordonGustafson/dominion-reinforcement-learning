@@ -765,22 +765,22 @@ def initial_supply_base_cards(num_players: int) -> Dict[str, int]:
 
 def initial_supply(num_players: int) -> Dict[str, int]:
     card_dict = initial_supply_base_cards(num_players)
-    card_dict["smithy"] = 10
-    card_dict["village"] = 10
-    card_dict["laboratory"] = 10
-    card_dict["chapel"] = 10
-    card_dict["workshop"] = 10
-    card_dict["remodel"] = 10
-    card_dict["mine"] = 10
-    card_dict["festival"] = 10
-    card_dict["market"] = 10
-    card_dict["cellar"] = 10
-    card_dict["harbinger"] = 10
-    card_dict["moneylender"] = 10
-    card_dict["council room"] = 10
-    card_dict["witch"] = 10
-    card_dict["militia"] = 10
-    card_dict["bandit"] = 10
+    # card_dict["smithy"] = 10
+    # card_dict["village"] = 10
+    # card_dict["laboratory"] = 10
+    # card_dict["chapel"] = 10
+    # card_dict["workshop"] = 10
+    # card_dict["remodel"] = 10
+    # card_dict["mine"] = 10
+    # card_dict["festival"] = 10
+    # card_dict["market"] = 10
+    # card_dict["cellar"] = 10
+    # card_dict["harbinger"] = 10
+    # card_dict["moneylender"] = 10
+    # card_dict["council room"] = 10
+    # card_dict["witch"] = 10
+    # card_dict["militia"] = 10
+    # card_dict["bandit"] = 10
     return card_dict
 
 def initial_game_state(player_names: List[str]) -> GameState:
