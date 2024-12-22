@@ -1,6 +1,12 @@
 from cards import *
 from chooser import Chooser
-from pytorch.dataloader import DominionDataset
+from pytorch.dataloader import DominionDataset, collate_fn
+from pytorch.model import DominionModel
+
+import torch
+from torch.utils.data import DataLoader
+
+import lightning as L
 
 import strategies
 import featurizer
@@ -48,7 +54,13 @@ if __name__ == '__main__':
 
     random_chooser_funcs = [strategies.random_strategy,
                             strategies.random_strategy]
-    games_df = play_n_games_and_get_dataframe(random_chooser_funcs, n=1)
+    games_df = play_n_games_and_get_dataframe(random_chooser_funcs, n=100)
     dataset = DominionDataset(games_df)
-    print(dataset[0])
+    train_dataloader = DataLoader(dataset=dataset, batch_size=1024, collate_fn=collate_fn, shuffle=True)
+
+    model = DominionModel(model=torch.nn.Linear(4, 1))
+    trainer = L.Trainer(max_epochs=100)
+    trainer.fit(model=model, train_dataloaders=train_dataloader)
+    print(model.model.weight)
+    print(model.model.bias)
 
