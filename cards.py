@@ -815,7 +815,7 @@ def offer_choice(game_state, choices, chooser, player_index_making_choice: int) 
         return choices[0].game_state
 
     # Keeping game_state as an argument, even though it may not be needed by value function approximation
-    selected_choice_index = chooser.make_choice(game_state, choices)
+    selected_choice_index = chooser.make_choice(game_state, choices, player_index_making_choice)
     selected_choice = choices[selected_choice_index]
     print(f"{player_name}: {selected_choice.description}")
     return selected_choice.game_state

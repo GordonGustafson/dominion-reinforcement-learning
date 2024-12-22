@@ -8,8 +8,8 @@ class Chooser(object):
         self._state_action_pairs: List[StateActionPair] = []
         self._game_outcome: Optional[GameOutcome] = None
 
-    def make_choice(self, game_state: GameState, choices: List[Choice]) -> int:
-        selected_action = self._chooser_func(game_state, choices)
+    def make_choice(self, game_state: GameState, choices: List[Choice], player_index: int) -> int:
+        selected_action = self._chooser_func(game_state, choices, player_index)
 
         state_action_pair = StateActionPair(state=GameState,
                                             possible_actions=choices,

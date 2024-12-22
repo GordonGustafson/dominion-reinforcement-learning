@@ -1,8 +1,10 @@
 import random
+from collections.abc import Callable
 
+import featurizer
 from cards import *
 
-def random_strategy(game_state: GameState, choices: List[Choice]) -> int:
+def random_strategy(game_state: GameState, choices: List[Choice], player_index: int) -> int:
     return random.randrange(len(choices))
 
 def read_int_from_stdin() -> int:
@@ -12,7 +14,7 @@ def read_int_from_stdin() -> int:
         input_string = input()
     return int(input_string)
 
-def user_chooser(game_state: GameState, choices: List[Choice]) -> int:
+def user_chooser(game_state: GameState, choices: List[Choice], player_index: int) -> int:
     player = game_state.current_player()
     # HACK: assumes only one opponent
     opponent = game_state.players[non_current_player_indices(game_state)[0]]
@@ -29,7 +31,14 @@ def user_chooser(game_state: GameState, choices: List[Choice]) -> int:
 
     return int(selected_choice)
 
-def big_money_until_province_then_all_victory(game_state: GameState, choices: List[Choice]) -> int:
+def scikit_learn_model_strategy(scikit_learn_model) -> Callable[[GameState, List[Choice]], int]:
+    def choose_with_model(game_state: GameState, choices: List[Choice], player_index: int) -> int:
+        state_values  = [scikit_learn_model.predict(featurizer.game_state_to_df(c.game_state, player_index)) for c in choices]
+        return state_values.index(max(state_values))
+
+    return choose_with_model
+
+def big_money_until_province_then_all_victory(game_state: GameState, choices: List[Choice], player_index: int) -> int:
     current_vp = get_total_player_vp(game_state.current_player())
     choice_delta_vps = [get_total_player_vp(choice.game_state.current_player()) - current_vp
                         for choice in choices]
@@ -45,7 +54,7 @@ def big_money_until_province_then_all_victory(game_state: GameState, choices: Li
             key=lambda c: get_average_treasure_value_per_card(c.game_state.current_player())))
     return choices.index(choice_with_best_average_treasure_value)
 
-def big_money_provinces_only(game_state: GameState, choices: List[Choice]) -> int:
+def big_money_provinces_only(game_state: GameState, choices: List[Choice], player_index: int) -> int:
     current_vp = get_total_player_vp(game_state.current_player())
     choice_delta_vps = [get_total_player_vp(choice.game_state.current_player()) - current_vp
                         for choice in choices]
