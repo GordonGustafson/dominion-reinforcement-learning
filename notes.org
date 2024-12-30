@@ -1,3 +1,56 @@
+* Best model ever trained:
+{'model_chooser': 79.0, 'big_money_provinces_only': 21.0}
+(don't have weights, it was a 4 parameter linear model maybe with bias)
+
+{'model_chooser': 72.0, 'big_money_provinces_only': 28.0}
+tensor([[ 1.5439, -0.0056,  1.1046, -1.1007]])
+
+* other models trained
+{'model_chooser': 6.0, 'big_money_provinces_only': 94.0}
+tensor([[ 0.7510, -0.0781,  0.4192, -0.5021]])
+tensor([0.0236])
+
+{'model_chooser': 21.5, 'big_money_provinces_only': 78.5}
+tensor([[ 1.0546,  0.1553,  1.3197, -1.4143]])
+tensor([0.0009])
+
+{'model_chooser': 22.0, 'big_money_provinces_only': 78.0}
+tensor([[ 1.0131,  0.0083,  1.3682, -1.3823]])
+
+{'model_chooser': 38.0, 'big_money_provinces_only': 62.0}
+tensor([[ 1.6876,  0.0064,  0.7468, -0.7700]])
+
+{'model_chooser': 55.0, 'big_money_provinces_only': 45.0}
+tensor([[ 1.7963,  0.0274,  0.8411, -0.8987]])
+
+{'model_chooser': 50.0, 'big_money_provinces_only': 50.0}
+tensor([[ 1.6247, -0.0134,  1.3446, -1.3913]])
+
+** epsilons = [1.0, 2**-1, 2**-2, 2**-3, 2**-4, 2**-5]
+
+** epsilons = [1.0, 2**-1, 2**-2, 2**-3, 2**-4]
+{'model_chooser': 77.0, 'big_money_provinces_only': 23.0}
+
+** epsilons = [1.0, 2**-1, 2**-2, 2**-3]
+*** 1 hidden layer, width 4, Relu -> BatchNorm
+lr=1e-2: {'model_chooser': 48.0, 'big_money_provinces_only': 52.0}
+lr=1e-1: {'model_chooser': 62.5, 'big_money_provinces_only': 37.5}
+lr=1e0: {'model_chooser': 80.5, 'big_money_provinces_only': 19.5}
+lr=1e0: {'model_chooser': 70.0, 'big_money_provinces_only': 30.0}
+lr=1e0: {'model_chooser': 71.0, 'big_money_provinces_only': 29.0}
+lr=1e0: {'model_chooser': 2.0, 'big_money_provinces_only': 98.0}
+
+lr=1e1: {'model_chooser': 0.0, 'big_money_provinces_only': 100.0}
+
+*** 1 hidden layer, width 8, Relu -> BatchNorm
+lr=1e0 {'model_chooser': 48.5, 'big_money_provinces_only': 51.5}
+
+*** 1 hidden layer, width 16, Relu -> BatchNorm
+{'model_chooser': 0.0, 'big_money_provinces_only': 100.0}
+
+*** 1 hidden layer, width 4, BatchNorm -> Relu
+{'model_chooser': 0.0, 'big_money_provinces_only': 100.0}
+
 * TODO implement picking 10 random kingdom cards
 * TODO fix bug where game doesn't end if 3 piles are bought out
 potentially introduced during switch from dict to Multiset for CardCounts

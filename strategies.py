@@ -1,6 +1,8 @@
 import random
 from collections.abc import Callable
 
+from pytorch.dataloader import tensorify_dataframe
+
 import featurizer
 from cards import *
 
@@ -33,10 +35,29 @@ def user_chooser(game_state: GameState, choices: List[Choice], player_index: int
 
 def scikit_learn_model_strategy(scikit_learn_model) -> Callable[[GameState, List[Choice]], int]:
     def choose_with_model(game_state: GameState, choices: List[Choice], player_index: int) -> int:
-        state_values  = [scikit_learn_model.predict(featurizer.game_state_to_df(c.game_state, player_index)) for c in choices]
+        state_values = [scikit_learn_model.predict(featurizer.game_state_to_df(c.game_state, player_index)) for c in choices]
         return state_values.index(max(state_values))
 
     return choose_with_model
+
+def pytorch_model_strategy(pytorch_model) -> Callable[[GameState, List[Choice]], int]:
+    def choose_with_model(game_state: GameState, choices: List[Choice], player_index: int) -> int:
+        state_values = [pytorch_model.forward(tensorify_dataframe(featurizer.game_state_to_df(c.game_state, player_index))) for c in choices]
+        return state_values.index(max(state_values))
+
+    return choose_with_model
+
+def wrap_with_epsilon_greedy(chooser_function: Callable[[GameState, List[Choice]], int], epsilon: float) -> Callable[[GameState, List[Choice]], int]:
+    def choose_with_epsilon_greedy(game_state: GameState, choices: List[Choice], player_index: int) -> int:
+        num_choices = len(choices)
+        greedy_choice = chooser_function(game_state, choices, player_index)
+        weights = [epsilon / num_choices] * num_choices
+        weights[greedy_choice] += 1 - epsilon
+
+        return random.choices(range(num_choices), weights=weights, k=1)[0]
+
+    return choose_with_epsilon_greedy
+
 
 def big_money_until_province_then_all_victory(game_state: GameState, choices: List[Choice], player_index: int) -> int:
     current_vp = get_total_player_vp(game_state.current_player())
@@ -60,7 +81,7 @@ def big_money_provinces_only(game_state: GameState, choices: List[Choice], playe
                         for choice in choices]
     max_delta_vp = max(choice_delta_vps)
 
-    # if we can buy a province OR already have one, maximize our VP
+    # if we can buy a province, maximize our VP
     if max_delta_vp >= 6:
         return choice_delta_vps.index(max_delta_vp)
 

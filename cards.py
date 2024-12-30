@@ -786,7 +786,7 @@ def initial_supply(num_players: int) -> Dict[str, int]:
 def initial_game_state(player_names: List[str]) -> GameState:
     num_players = len(player_names)
     return GameState(players=[initial_player_state(name) for name in player_names],
-                     current_player_index=0,
+                     current_player_index=random.randrange(len(player_names)),
                      max_turns_per_player=0,
                      pending_effects=(),
                      actions=1,
@@ -811,7 +811,7 @@ def game_completed(game_state: GameState) -> bool:
 def offer_choice(game_state, choices, chooser, player_index_making_choice: int) -> GameState:
     player_name = game_state.players[player_index_making_choice].name
     if len(choices) == 1:
-        print(f"{player_name}: {choices[0].description}")
+        # print(f"{player_name}: {choices[0].description}")
         return choices[0].game_state
 
     # Keeping game_state as an argument, even though it may not be needed by value function approximation

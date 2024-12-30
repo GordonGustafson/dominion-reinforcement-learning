@@ -16,6 +16,8 @@ class DominionModel(L.LightningModule):
         predicted_rewards = self.forward(batch, batch_idx).squeeze(1)
         features, rewards = batch
         # print(f"predicted_rewards: {predicted_rewards}, rewards: {rewards}")
+        for parameter in self.model.parameters():
+            print(parameter.data)
         train_loss = torch.nn.functional.binary_cross_entropy(predicted_rewards, target=rewards)
         self.log("train_loss", train_loss)
         return train_loss
@@ -27,4 +29,4 @@ class DominionModel(L.LightningModule):
         pass
 
     def configure_optimizers(self):
-        return torch.optim.AdamW(self.model.parameters(), lr=1e-3, betas=(0.9, 0.999))
+        return torch.optim.AdamW(self.model.parameters(), lr=1e0, betas=(0.9, 0.999))
