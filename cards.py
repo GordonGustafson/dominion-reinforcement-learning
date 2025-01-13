@@ -70,6 +70,7 @@ class TURN_PHASES:
 
 _GameStateBase = NamedTuple("GameState", [
     ("players", List[Player]),
+    ("first_player_index", int),
     ("current_player_index", int),
     ("max_turns_per_player", int),
     ("supply", CardCounts),
@@ -105,6 +106,7 @@ class GameState(_GameStateBase):
 
 def make_game_state(
         players,
+        first_player_index=0,
         current_player_index=0,
         max_turns_per_player=0,
         supply=Multiset(),
@@ -785,8 +787,10 @@ def initial_supply(num_players: int) -> Dict[str, int]:
 
 def initial_game_state(player_names: List[str]) -> GameState:
     num_players = len(player_names)
+    first_player_index = random.randrange(len(player_names))
     return GameState(players=[initial_player_state(name) for name in player_names],
-                     current_player_index=random.randrange(len(player_names)),
+                     first_player_index=first_player_index,
+                     current_player_index=first_player_index,
                      max_turns_per_player=0,
                      pending_effects=(),
                      actions=1,
@@ -855,7 +859,7 @@ def game_flow(player_names: List[str], choosers: List):
     player_vps = [get_total_player_vp(player) for player in game_state.players]
     # We end the game before `do_cleanup_phase` rotates the current player, so
     # game_state.current_player_index had the last turn.
-    players_had_equal_number_of_turns = game_state.current_player_index == 1
+    players_had_equal_number_of_turns = game_state.current_player_index != game_state.first_player_index
     if player_vps[0] == player_vps[1] and players_had_equal_number_of_turns:
         print("GAME OUTPUT: DRAW")
         choosers[0]._game_outcome = GAME_OUTCOME.DRAW

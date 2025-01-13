@@ -29,4 +29,7 @@ class DominionModel(L.LightningModule):
         pass
 
     def configure_optimizers(self):
-        return torch.optim.AdamW(self.model.parameters(), lr=1e0, betas=(0.9, 0.999))
+        return torch.optim.AdamW(self.model.parameters(),
+                                 lr=1e-1,
+                                 betas=(0.9, 0.999),
+                                 weight_decay=0.04)

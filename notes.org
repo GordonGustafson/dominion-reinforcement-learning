@@ -26,10 +26,70 @@ tensor([[ 1.7963,  0.0274,  0.8411, -0.8987]])
 {'model_chooser': 50.0, 'big_money_provinces_only': 50.0}
 tensor([[ 1.6247, -0.0134,  1.3446, -1.3913]])
 
-** epsilons = [1.0, 2**-1, 2**-2, 2**-3, 2**-4, 2**-5]
+** 800 games, 20 epochs per epsilon, epsilons = [1.0, 2**-1, 2**-2, 2**-3, 2**-4]
+*** batch size 1024
+lr=1e-1, weight_decay=0.04: {'model_chooser': 71.5, 'big_money_provinces_only': 28.5}
+lr=1e-1, weight_decay=0.04: {'model_chooser': 80.0, 'big_money_provinces_only': 20.0}
+lr=1e-1, weight_decay=0.04: {'model_chooser': 68.0, 'big_money_provinces_only': 32.0}
 
-** epsilons = [1.0, 2**-1, 2**-2, 2**-3, 2**-4]
-{'model_chooser': 77.0, 'big_money_provinces_only': 23.0}
+** 800 games, 20 epochs per epsilon, epsilons = [1.0, 2**-1, 2**-2, 2**-3, 2**-4]
+*** batch size 1024
+lr=1e-1, weight_decay=0.04: {'model_chooser': 71.5, 'big_money_provinces_only': 28.5}
+lr=1e-1, weight_decay=0.04: {'model_chooser': 80.0, 'big_money_provinces_only': 20.0}
+lr=1e-1, weight_decay=0.04: {'model_chooser': 68.0, 'big_money_provinces_only': 32.0}
+
+** 400 games, 20 epochs per epsilon, epsilons = [1.0, 2**-1, 2**-2, 2**-3, 2**-4]
+*** batch size 1024
+lr=1e-1, weight_decay=0.04: {'model_chooser': 77.0, 'big_money_provinces_only': 23.0}
+lr=1e-1, weight_decay=0.04: {'model_chooser': 79.5, 'big_money_provinces_only': 20.5}
+lr=1e-1, weight_decay=0.04: {'model_chooser': 80.0, 'big_money_provinces_only': 20.0}
+
+** 200 games, 20 epochs per epsilon, epsilons = [1.0, 2**-1, 2**-2, 2**-3, 2**-4]
+*** batch size 1024
+lr=1e-1, weight_decay=0.04: {'model_chooser': 74.0, 'big_money_provinces_only': 26.0}
+lr=1e-1, weight_decay=0.04: {'model_chooser': 79.5, 'big_money_provinces_only': 20.5}
+lr=1e-1, weight_decay=0.04: {'model_chooser': 66.5, 'big_money_provinces_only': 33.5}
+
+** 100 games, 20 epochs per epsilon, epsilons = [1.0, 2**-1, 2**-2, 2**-3, 2**-4]
+*** batch size 64
+lr=1e-1, weight_decay=0.00: {'model_chooser': 11.0, 'big_money_provinces_only': 89.0}
+
+*** batch size 128
+lr=1e-1, weight_decay=0.00: {'model_chooser': 62.5, 'big_money_provinces_only': 37.5}
+
+*** batch size 256
+lr=1e-1, weight_decay=0.00: {'model_chooser': 61.5, 'big_money_provinces_only': 38.5}
+lr=1e-1, weight_decay=0.00: {'model_chooser': 0.0, 'big_money_provinces_only': 100.0}
+
+*** batch size 512
+lr=1e-1, weight_decay=0.00: {'model_chooser': 58.0, 'big_money_provinces_only': 42.0}
+
+*** batch size 1024
+lr=1e0,  weight_decay=0.01: {'model_chooser': 77.0, 'big_money_provinces_only': 23.0}
+lr=1e0,  weight_decay=0.01: {'model_chooser': 0.0, 'big_money_provinces_only': 100.0}
+
+lr=1e-1, weight_decay=0.00: {'model_chooser': 74.0, 'big_money_provinces_only': 26.0}
+
+lr=1e-1, weight_decay=0.01: {'model_chooser': 69.5, 'big_money_provinces_only': 30.5}
+
+lr=1e-1, weight_decay=0.02: {'model_chooser': 2.0, 'big_money_provinces_only': 98.0}
+
+lr=1e-1, weight_decay=0.04: {'model_chooser': 78.0, 'big_money_provinces_only': 22.0}
+lr=1e-1, weight_decay=0.04: {'model_chooser': 72.5, 'big_money_provinces_only': 27.5}
+
+lr=1e-1, weight_decay=0.08: {'model_chooser': 47.0, 'big_money_provinces_only': 53.0}
+lr=1e-1, weight_decay=0.08: {'model_chooser': 12.5, 'big_money_provinces_only': 87.5}
+
+lr=1e-1, weight_decay=0.16: {'model_chooser': 64.5, 'big_money_provinces_only': 35.5}
+
+lr=1e-1, weight_decay=0.32: {'model_chooser': 71.0, 'big_money_provinces_only': 29.0}
+lr=1e-1, weight_decay=0.64: {'model_chooser': 64.0, 'big_money_provinces_only': 36.0}
+lr=1e-1, weight_decay=1.28: excessively long games 
+
+
+
+
+
 
 ** epsilons = [1.0, 2**-1, 2**-2, 2**-3]
 *** 1 hidden layer, width 4, Relu -> BatchNorm
