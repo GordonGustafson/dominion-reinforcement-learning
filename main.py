@@ -1,0 +1,3 @@
+from models.value_function_approximation import train_value_function_approximation_model
+
+train_value_function_approximation_model()
