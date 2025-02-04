@@ -2,6 +2,9 @@ from cards import *
 
 from typing import List, Optional
 
+from game import Choice, StateActionPair
+
+
 class Chooser(object):
     def __init__(self, chooser_func):
         self._chooser_func = chooser_func

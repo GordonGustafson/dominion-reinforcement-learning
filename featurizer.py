@@ -5,6 +5,8 @@ from cards import *
 import numpy as np
 import pandas as pd
 
+from game import StateActionPair
+
 
 def game_outcome_to_reward(game_outcome: GameOutcome) -> float:
     if game_outcome == GameOutcome.WIN:

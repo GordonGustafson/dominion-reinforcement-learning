@@ -1,4 +1,5 @@
-from cards import game_flow, GameOutcome, GameOutcome
+from cards import GameOutcome, GameOutcome
+from game import game_flow
 from chooser import Chooser
 
 import featurizer

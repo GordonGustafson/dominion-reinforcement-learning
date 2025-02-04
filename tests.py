@@ -2,6 +2,8 @@ from cards import *
 
 import unittest
 
+from game import buy_phase_choices, Choice
+
 
 class TestCards(unittest.TestCase):
     def test_money_from_treasures(self):
