@@ -30,10 +30,10 @@ class TestCards(unittest.TestCase):
 
     def test_game_state_equals(self):
         game_state         = make_game_state(players=[make_player(hand=dict_to_card_counts({"copper": 1}), deck=dict_to_card_counts({"estate": 2}), discard_pile=dict_to_card_counts({"silver": 3}))])
-        different_cleanup  = make_game_state(players=[make_player(hand=dict_to_card_counts({"copper": 1}), deck=dict_to_card_counts({"estate": 2}), discard_pile=dict_to_card_counts({"silver": 3}))], turn_phase=TURN_PHASES.CLEANUP)
+        different_cleanup  = make_game_state(players=[make_player(hand=dict_to_card_counts({"copper": 1}), deck=dict_to_card_counts({"estate": 2}), discard_pile=dict_to_card_counts({"silver": 3}))], turn_phase=TurnPhase.CLEANUP)
         different_supply   = make_game_state(players=[make_player(hand=dict_to_card_counts({"copper": 1}), deck=dict_to_card_counts({"estate": 2}), discard_pile=dict_to_card_counts({"silver": 3}))], supply=dict_to_card_counts({"province": 9}))
         different_index    = make_game_state(players=[make_player(hand=dict_to_card_counts({"copper": 1}), deck=dict_to_card_counts({"estate": 2}), discard_pile=dict_to_card_counts({"silver": 3}))], current_player_index=1)
-        different_effects  = make_game_state(players=[make_player(hand=dict_to_card_counts({"copper": 1}), deck=dict_to_card_counts({"estate": 2}), discard_pile=dict_to_card_counts({"silver": 3}))], pending_effects=(Effect(EFFECT_NAME.PRODUCE_MONEY, 1)))
+        different_effects  = make_game_state(players=[make_player(hand=dict_to_card_counts({"copper": 1}), deck=dict_to_card_counts({"estate": 2}), discard_pile=dict_to_card_counts({"silver": 3}))], pending_effects=(Effect(EffectName.PRODUCE_MONEY, 1)))
         different_actions  = make_game_state(players=[make_player(hand=dict_to_card_counts({"copper": 1}), deck=dict_to_card_counts({"estate": 2}), discard_pile=dict_to_card_counts({"silver": 3}))], actions=2)
         different_hand     = make_game_state(players=[make_player(hand=dict_to_card_counts({"copper": 9}), deck=dict_to_card_counts({"estate": 2}), discard_pile=dict_to_card_counts({"silver": 3}))],)
         different_deck     = make_game_state(players=[make_player(hand=dict_to_card_counts({"copper": 1}), deck=dict_to_card_counts({"estate": 9}), discard_pile=dict_to_card_counts({"silver": 3}))],)
@@ -51,7 +51,7 @@ class TestCards(unittest.TestCase):
         self.assertNotEqual(game_state, different_discard)
 
     def test_buy_phase_choices(self):
-        buy_game_state = make_game_state(turn_phase=TURN_PHASES.BUY,
+        buy_game_state = make_game_state(turn_phase=TurnPhase.BUY,
                                          supply=dict_to_card_counts({"copper": 1, "silver": 1, "gold": 1, "estate": 0, "duchy": 1, "province": 1}),
                                          total_money=5,
                                          buys=2,
@@ -60,7 +60,7 @@ class TestCards(unittest.TestCase):
                                                               discard_pile=dict_to_card_counts({"estate": 1}))])
 
         discard_pile = buy_game_state.current_player().discard_pile
-        cleanup_game_state = buy_game_state._replace(turn_phase=TURN_PHASES.CLEANUP)
+        cleanup_game_state = buy_game_state._replace(turn_phase=TurnPhase.CLEANUP)
         expected_choices = [
             Choice(cleanup_game_state, "buy nothing"),
             Choice(buy_game_state._replace(supply=remove_card_by_name(cleanup_game_state.supply, "copper"), total_money=5, buys=1).replace_current_player_kwargs(discard_pile=add_card_by_name(discard_pile, "copper")), "buy copper"),
@@ -104,7 +104,7 @@ class TestCards(unittest.TestCase):
         self.assertEqual(draw_card(draw_card(draw_card(draw_card(draw_card(player))))), exp_after_four_draws)
 
     def test_do_cleanup_phase(self):
-        game_state = make_game_state(turn_phase=TURN_PHASES.CLEANUP,
+        game_state = make_game_state(turn_phase=TurnPhase.CLEANUP,
                                      current_player_index=1,
                                      max_turns_per_player=0,
                                      players=[make_player(hand=dict_to_card_counts({"copper": 5}),
@@ -115,7 +115,7 @@ class TestCards(unittest.TestCase):
                                                           discard_pile=dict_to_card_counts({"copper": 1})),
                                               ])
 
-        game_state_after_cleanup = make_game_state(turn_phase=TURN_PHASES.ACTION,
+        game_state_after_cleanup = make_game_state(turn_phase=TurnPhase.ACTION,
                                                    pending_effects=(),
                                                    current_player_index=0,
                                                    max_turns_per_player=1,

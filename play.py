@@ -1,4 +1,4 @@
-from cards import game_flow, GameOutcome, GAME_OUTCOME
+from cards import game_flow, GameOutcome, GameOutcome
 from chooser import Chooser
 
 import featurizer
@@ -7,11 +7,11 @@ import pandas as pd
 
 
 def game_outcome_to_number_of_wins(game_outcome: GameOutcome) -> float:
-    if game_outcome == GAME_OUTCOME.WIN:
+    if game_outcome == GameOutcome.WIN:
         return 1.0
-    elif game_outcome == GAME_OUTCOME.LOSS:
+    elif game_outcome == GameOutcome.LOSS:
         return 0.0
-    elif game_outcome == GAME_OUTCOME.DRAW:
+    elif game_outcome == GameOutcome.DRAW:
         return 0.5
     else:
         assert False

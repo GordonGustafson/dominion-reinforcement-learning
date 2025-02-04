@@ -1,13 +1,13 @@
 import random
 
 from multiset import Multiset
-from typing import NamedTuple, Tuple, List, Dict, Set, Optional, Sequence, Union
+from typing import NamedTuple, Tuple, List, Dict, Set, Optional, Sequence
 
 from dataclasses import dataclass
+from enum import Enum
 
 
-# TODO: make this a proper Python enum
-class EFFECT_NAME:
+class EffectName(Enum):
     DRAW_CARDS = "draw_cards"
     PLUS_ACTIONS = "plus_actions"
     PLUS_BUYS = "plus_buys"
@@ -29,8 +29,8 @@ class EFFECT_NAME:
     VP = "vp"
 
 Effect = NamedTuple("Effect", [
-    ("name", EFFECT_NAME),
-    ("value", int),
+    ("name", EffectName),
+    ("value", int | None),
 ])
 
 Card = NamedTuple("Card", [
@@ -63,8 +63,7 @@ def make_player(hand=Multiset(),
                 name="unnamed player"):
     return Player(hand, deck, top_of_deck, played_actions, discard_pile, name)
 
-# TODO: make this a proper Python enum
-class TURN_PHASES:
+class TurnPhase(Enum):
     ACTION = "ACTION"
     TREASURE = "TREASURE"
     BUY = "BUY"
@@ -77,7 +76,7 @@ _GameStateBase = NamedTuple("GameState", [
     ("max_turns_per_player", int),
     ("supply", CardCounts),
     # TODO: proper type annotation for this
-    ("turn_phase", str),
+    ("turn_phase", TurnPhase),
     ("actions", int),
     ("buys", int),
     ("total_money", int),
@@ -112,7 +111,7 @@ def make_game_state(
         current_player_index=0,
         max_turns_per_player=0,
         supply=Multiset(),
-        turn_phase=TURN_PHASES.ACTION,
+        turn_phase=TurnPhase.ACTION,
         actions=1,
         buys=1,
         total_money=0,
@@ -275,79 +274,77 @@ StateActionPair = NamedTuple("StateActionPair", [
     ("selected_action", int),
 ])
 
-# TODO: make this a proper Python enum
-class GAME_OUTCOME:
+class GameOutcome:
     WIN = "WIN"
     LOSS = "LOSS"
     DRAW = "DRAW"
 
-GameOutcome = Union[GAME_OUTCOME.WIN, GAME_OUTCOME.LOSS, GAME_OUTCOME.DRAW]
 
 
 # TODO: should we use the same "money_produced" field for both treasures and actions?
 CARD_DEFS = {
-    "copper":   make_card(name="copper",   cost=0, treasure_effects=(Effect(EFFECT_NAME.PRODUCE_MONEY, 1),)),
-    "silver":   make_card(name="silver",   cost=3, treasure_effects=(Effect(EFFECT_NAME.PRODUCE_MONEY, 2),)),
-    "gold":     make_card(name="gold",     cost=6, treasure_effects=(Effect(EFFECT_NAME.PRODUCE_MONEY, 3),)),
+    "copper":   make_card(name="copper", cost=0, treasure_effects=(Effect(EffectName.PRODUCE_MONEY, 1),)),
+    "silver":   make_card(name="silver", cost=3, treasure_effects=(Effect(EffectName.PRODUCE_MONEY, 2),)),
+    "gold":     make_card(name="gold", cost=6, treasure_effects=(Effect(EffectName.PRODUCE_MONEY, 3),)),
 
-    "estate":   make_card(name="estate",   cost=2, vp_effects=(Effect(EFFECT_NAME.VP, 1),)),
-    "duchy":    make_card(name="duchy",    cost=5, vp_effects=(Effect(EFFECT_NAME.VP, 3),)),
-    "province": make_card(name="province", cost=8, vp_effects=(Effect(EFFECT_NAME.VP, 6),)),
+    "estate":   make_card(name="estate", cost=2, vp_effects=(Effect(EffectName.VP, 1),)),
+    "duchy":    make_card(name="duchy", cost=5, vp_effects=(Effect(EffectName.VP, 3),)),
+    "province": make_card(name="province", cost=8, vp_effects=(Effect(EffectName.VP, 6),)),
 
-    "curse":    make_card(name="curse",    cost=0, vp_effects=(Effect(EFFECT_NAME.VP, -1),)),
+    "curse":    make_card(name="curse", cost=0, vp_effects=(Effect(EffectName.VP, -1),)),
 
     # +cards
-    "smithy":    make_card(name="smithy",  cost=4, action_effects=(Effect(EFFECT_NAME.DRAW_CARDS, 3),)),
+    "smithy":    make_card(name="smithy", cost=4, action_effects=(Effect(EffectName.DRAW_CARDS, 3),)),
 
     # +actions
-    "laboratory": make_card(name="laboratory", cost=5, action_effects=(Effect(EFFECT_NAME.DRAW_CARDS, 2), Effect(EFFECT_NAME.PLUS_ACTIONS, 1))),
-    "village":    make_card(name="village",    cost=3, action_effects=(Effect(EFFECT_NAME.DRAW_CARDS, 1), Effect(EFFECT_NAME.PLUS_ACTIONS, 2))),
+    "laboratory": make_card(name="laboratory", cost=5, action_effects=(Effect(EffectName.DRAW_CARDS, 2), Effect(EffectName.PLUS_ACTIONS, 1))),
+    "village":    make_card(name="village", cost=3, action_effects=(Effect(EffectName.DRAW_CARDS, 1), Effect(EffectName.PLUS_ACTIONS, 2))),
 
     # trashing cards
-    "chapel":     make_card(name="chapel",     cost=2, action_effects=(Effect(EFFECT_NAME.MAY_TRASH_A_CARD_FROM_YOUR_HAND, None),
-                                                                       Effect(EFFECT_NAME.MAY_TRASH_A_CARD_FROM_YOUR_HAND, None),
-                                                                       Effect(EFFECT_NAME.MAY_TRASH_A_CARD_FROM_YOUR_HAND, None),
-                                                                       Effect(EFFECT_NAME.MAY_TRASH_A_CARD_FROM_YOUR_HAND, None))),
+    "chapel":     make_card(name="chapel", cost=2, action_effects=(Effect(EffectName.MAY_TRASH_A_CARD_FROM_YOUR_HAND, None),
+                                                                       Effect(EffectName.MAY_TRASH_A_CARD_FROM_YOUR_HAND, None),
+                                                                       Effect(EffectName.MAY_TRASH_A_CARD_FROM_YOUR_HAND, None),
+                                                                       Effect(EffectName.MAY_TRASH_A_CARD_FROM_YOUR_HAND, None))),
 
     # gaining cards
-    "workshop":  make_card(name="workshop", cost=3, action_effects=(Effect(EFFECT_NAME.GAIN_A_CARD_COSTING_UP_TO, 4),)),
-    "remodel":   make_card(name="remodel",  cost=4, action_effects=(Effect(EFFECT_NAME.TRASH_GAIN_A_CARD_COSTING_UP_TO_X_MORE, 2),)),
-    "mine":      make_card(name="mine",     cost=5, action_effects=(Effect(EFFECT_NAME.MAY_TRASH_TREASURE_GAIN_TREASURE_TO_HAND_COSTING_UP_TO_X_MORE, 3),)),
+    "workshop":  make_card(name="workshop", cost=3, action_effects=(Effect(EffectName.GAIN_A_CARD_COSTING_UP_TO, 4),)),
+    "remodel":   make_card(name="remodel", cost=4, action_effects=(Effect(EffectName.TRASH_GAIN_A_CARD_COSTING_UP_TO_X_MORE, 2),)),
+    "mine":      make_card(name="mine", cost=5, action_effects=(Effect(EffectName.MAY_TRASH_TREASURE_GAIN_TREASURE_TO_HAND_COSTING_UP_TO_X_MORE, 3),)),
 
     # +buys
-    "festival":  make_card(name="festival", cost=5, action_effects=(Effect(EFFECT_NAME.PLUS_ACTIONS, 2),
-                                                                    Effect(EFFECT_NAME.PLUS_BUYS, 1),
-                                                                    Effect(EFFECT_NAME.PRODUCE_MONEY, 2))),
-    "market":    make_card(name="market", cost=5, action_effects=(Effect(EFFECT_NAME.PLUS_ACTIONS, 1),
-                                                                  Effect(EFFECT_NAME.PLUS_BUYS, 1),
-                                                                  Effect(EFFECT_NAME.PRODUCE_MONEY, 1, ),
-                                                                  Effect(EFFECT_NAME.DRAW_CARDS, 1))),
+    "festival":  make_card(name="festival", cost=5, action_effects=(Effect(EffectName.PLUS_ACTIONS, 2),
+                                                                    Effect(EffectName.PLUS_BUYS, 1),
+                                                                    Effect(EffectName.PRODUCE_MONEY, 2))),
+    "market":    make_card(name="market", cost=5, action_effects=(Effect(EffectName.PLUS_ACTIONS, 1),
+                                                                  Effect(EffectName.PLUS_BUYS, 1),
+                                                                  Effect(EffectName.PRODUCE_MONEY, 1, ),
+                                                                  Effect(EffectName.DRAW_CARDS, 1))),
 
     # simple draw/discard effects
-    "cellar":    make_card(name="cellar", cost=2, action_effects=(Effect(EFFECT_NAME.PLUS_ACTIONS, 1),
-                                                                  Effect(EFFECT_NAME.DISCARD_ANY_NUMBER_THEN_DRAW_THAT_MANY, None))),
-    "harbinger": make_card(name="harbinger", cost=3, action_effects=(Effect(EFFECT_NAME.PLUS_ACTIONS, 1),
-                                                                     Effect(EFFECT_NAME.DRAW_CARDS, 1),
-                                                                     Effect(EFFECT_NAME.MAY_PUT_ANY_CARD_FROM_DISCARD_PILE_ONTO_DECK, None))),
+    "cellar":    make_card(name="cellar", cost=2, action_effects=(Effect(EffectName.PLUS_ACTIONS, 1),
+                                                                  Effect(EffectName.DISCARD_ANY_NUMBER_THEN_DRAW_THAT_MANY, None))),
+    "harbinger": make_card(name="harbinger", cost=3, action_effects=(Effect(EffectName.PLUS_ACTIONS, 1),
+                                                                     Effect(EffectName.DRAW_CARDS, 1),
+                                                                     Effect(EffectName.MAY_PUT_ANY_CARD_FROM_DISCARD_PILE_ONTO_DECK, None))),
     # {"name": "Poacher",      "cost": 4, "type": "action", EFFECT_NAME.DRAW_CARDS: 1, "actions": 1, @"+1$, discard a card per empty supply pile"
 
     # interacting with other cards
-    "moneylender": make_card(name="moneylender", cost=4, action_effects=(Effect(EFFECT_NAME.MAY_TRASH_A_COPPER_TO_PRODUCE_MONEY, 3),)),
+    "moneylender": make_card(name="moneylender", cost=4, action_effects=(Effect(EffectName.MAY_TRASH_A_COPPER_TO_PRODUCE_MONEY, 3),)),
     # {"name": "Merchant",     "cost": 3, "type": "action", EFFECT_NAME.DRAW_CARDS: 1, "actions": 1, "the_first_time_you_play_a_silver_this_turn_+1_money": 1,
 
     # VP cards
     # {"name": "Gardens",      "cost": 4, "type": "victory", @"worth 1 vp per 10 cards you have (rounded down)"
 
     # attacks
-    "council room": make_card(name="council room", cost=5, action_effects=(Effect(EFFECT_NAME.DRAW_CARDS, 4),
-                                                                           Effect(EFFECT_NAME.PLUS_BUYS, 1),
-                                                                           Effect(EFFECT_NAME.EACH_OTHER_PLAYER_DRAWS_A_CARD, None))),
-    "witch": make_card(name="witch", cost=5, action_effects=(Effect(EFFECT_NAME.DRAW_CARDS, 2),
-                                                             Effect(EFFECT_NAME.EACH_OTHER_PLAYER_GAINS_A_CURSE, None))),
-    "militia": make_card(name="militia", cost=4, action_effects=(Effect(EFFECT_NAME.PRODUCE_MONEY, 2),
-                                                                 Effect(EFFECT_NAME.EACH_OTHER_PLAYER_DISCARDS_DOWN_TO, 3))),
-    "bandit": make_card(name="bandit", cost=5, action_effects=(Effect(EFFECT_NAME.GAIN_A_GOLD, None),
-                                                               Effect(EFFECT_NAME.EACH_OTHER_PLAYER_BANDIT_EFFECT, None))),
+    "council room": make_card(name="council room", cost=5, action_effects=(Effect(EffectName.DRAW_CARDS, 4),
+                                                                           Effect(EffectName.PLUS_BUYS, 1),
+                                                                           Effect(EffectName.EACH_OTHER_PLAYER_DRAWS_A_CARD, None))),
+    "witch": make_card(name="witch", cost=5, action_effects=(Effect(EffectName.DRAW_CARDS, 2),
+                                                             Effect(EffectName.EACH_OTHER_PLAYER_GAINS_A_CURSE, None))),
+    "militia": make_card(name="militia", cost=4, action_effects=(Effect(EffectName.PRODUCE_MONEY, 2),
+                                                                 Effect(EffectName.EACH_OTHER_PLAYER_DISCARDS_DOWN_TO, 3))),
+    "bandit": make_card(name="bandit", cost=5, action_effects=(Effect(EffectName.GAIN_A_GOLD, None),
+                                                               Effect(EffectName.EACH_OTHER_PLAYER_BANDIT_EFFECT, None))),
     # {"name": "Bureaucrat",   "cost": 4, "type": "action", @"gain a silver onto your deck. each other player reveals a victory card from their hand it puts it onto their deck (or reveals a hand with no victory cards)"
     # {"name": "Moat",         "cost": 2, "type": "action", EFFECT_NAME.DRAW_CARDS: 2, "moat_effect": 1,
 
@@ -482,7 +479,7 @@ def unique_cards(card_counts: CardCounts) -> Set[Card]:
 
 def action_phase_choices(action_game_state: GameState) -> List[Choice]:
     player = action_game_state.current_player()
-    treasure_game_state = action_game_state._replace(turn_phase=TURN_PHASES.TREASURE)
+    treasure_game_state = action_game_state._replace(turn_phase=TurnPhase.TREASURE)
 
     move_to_treasure_phase = Choice(game_state=treasure_game_state, action=PlayNoActionCard())
     choices = [move_to_treasure_phase]
@@ -509,7 +506,7 @@ def treasure_phase_choices(treasure_game_state: GameState) -> List[Choice]:
     # We don't support treasure choices yet, so we always return only a single
     # choice of playing all your treasures.
     buy_game_state = treasure_game_state._replace(
-        turn_phase=TURN_PHASES.BUY,
+        turn_phase=TurnPhase.BUY,
         total_money=(treasure_game_state.total_money
                      + money_from_treasures(treasure_game_state.current_player().hand)))
     return [Choice(game_state=buy_game_state, action=PlayAllTreasures())]
@@ -518,7 +515,7 @@ def treasure_phase_choices(treasure_game_state: GameState) -> List[Choice]:
 def buy_phase_choices(buy_game_state: GameState) -> List[Choice]:
     # Move to cleanup state if-and-only-if the player buys nothing OR if they
     # buy something with only 1 buy left.
-    turn_phase_after_one_buy = TURN_PHASES.BUY if buy_game_state.buys > 1 else TURN_PHASES.CLEANUP
+    turn_phase_after_one_buy = TurnPhase.BUY if buy_game_state.buys > 1 else TurnPhase.CLEANUP
     game_state_after_one_buy = buy_game_state._replace(turn_phase=turn_phase_after_one_buy,
                                                        buys=buy_game_state.buys-1)
 
@@ -528,7 +525,7 @@ def buy_phase_choices(buy_game_state: GameState) -> List[Choice]:
                                             buyable_cards,
                                             pay_card_cost=True)
 
-    cleanup_game_state = buy_game_state._replace(turn_phase=TURN_PHASES.CLEANUP)
+    cleanup_game_state = buy_game_state._replace(turn_phase=TurnPhase.CLEANUP)
     buy_nothing = Choice(game_state=cleanup_game_state, action=GainNothing())
 
     return [buy_nothing] + buy_choices
@@ -657,24 +654,24 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
     discard_pile = current_player.discard_pile
     hand = current_player.hand
 
-    if effect.name == EFFECT_NAME.DRAW_CARDS:
+    if effect.name == EffectName.DRAW_CARDS:
         return draw_cards_current_player(game_state, effect.value)
-    elif effect.name == EFFECT_NAME.PLUS_ACTIONS:
+    elif effect.name == EffectName.PLUS_ACTIONS:
         return game_state._replace(actions=game_state.actions + effect.value)
-    elif effect.name == EFFECT_NAME.PRODUCE_MONEY:
+    elif effect.name == EffectName.PRODUCE_MONEY:
         return game_state._replace(total_money=game_state.total_money + effect.value)
-    elif effect.name == EFFECT_NAME.PLUS_BUYS:
+    elif effect.name == EffectName.PLUS_BUYS:
         return game_state._replace(buys=game_state.buys + effect.value)
-    elif effect.name == EFFECT_NAME.GAIN_A_GOLD:
+    elif effect.name == EffectName.GAIN_A_GOLD:
         return gain_card_current_player(game_state, card_name_to_card("gold"))
-    elif effect.name == EFFECT_NAME.MAY_TRASH_A_CARD_FROM_YOUR_HAND:
+    elif effect.name == EffectName.MAY_TRASH_A_CARD_FROM_YOUR_HAND:
         trash_nothing = Choice(game_state=game_state, action=TrashNoCardFromHand())
         choices = [trash_nothing]
         for card, freq in hand.items():
             after_trashing_card = game_state.replace_current_player_kwargs(hand=remove_card(hand, card))
             choices.append(Choice(game_state=after_trashing_card, action=TrashCardFromHand(card)))
         return offer_choice(game_state, choices, current_player_chooser, current_player_index)
-    elif effect.name == EFFECT_NAME.GAIN_A_CARD_COSTING_UP_TO:
+    elif effect.name == EffectName.GAIN_A_CARD_COSTING_UP_TO:
         gainable_cards = cards_in_supply_costing_less_than(game_state, effect.value)
         if len(gainable_cards) == 0:
             single_choice = [Choice(game_state=game_state, action=GainNothing())]
@@ -683,49 +680,49 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
                                             gainable_cards,
                                             pay_card_cost=False)
         return offer_choice(game_state, choices, current_player_chooser, current_player_index)
-    elif effect.name == EFFECT_NAME.GAIN_A_TREASURE_TO_HAND_COSTING_UP_TO:
+    elif effect.name == EffectName.GAIN_A_TREASURE_TO_HAND_COSTING_UP_TO:
         gainable_cards = [card for card
                           in cards_in_supply_costing_less_than(game_state, effect.value)
                           if is_treasure(card)]
         if len(gainable_cards) == 0:
             single_choice = [Choice(game_state=game_state, action=GainNothing())]
             return offer_choice(game_state, single_choice, current_player_chooser, current_player_index)
-        choices = gainable_cards_to_hand_to_choices(game_state, gainable_cards, "gain")
+        choices = gainable_cards_to_hand_to_choices(game_state, gainable_cards)
         return offer_choice(game_state, choices, current_player_chooser, current_player_index)
-    elif effect.name == EFFECT_NAME.TRASH_GAIN_A_CARD_COSTING_UP_TO_X_MORE:
+    elif effect.name == EffectName.TRASH_GAIN_A_CARD_COSTING_UP_TO_X_MORE:
         if num_cards(hand) == 0:
             single_choice = [Choice(game_state=game_state, action=GainNothing())]
             return offer_choice(game_state, single_choice, current_player_chooser, current_player_index)
 
         choices = []
         for card, freq in hand.items():
-            gain_effect = Effect(EFFECT_NAME.GAIN_A_CARD_COSTING_UP_TO, card.cost + effect.value)
+            gain_effect = Effect(EffectName.GAIN_A_CARD_COSTING_UP_TO, card.cost + effect.value)
             new_game_state = game_state.prepend_effect(gain_effect)
             new_game_state = new_game_state.replace_current_player_kwargs(hand=remove_card(hand, card))
             choices.append(Choice(game_state=new_game_state,
                                   action=TrashCardFromHandToGainCardCostingUpTo2More(card)))
         return offer_choice(game_state, choices, current_player_chooser, current_player_index)
-    elif effect.name == EFFECT_NAME.MAY_TRASH_TREASURE_GAIN_TREASURE_TO_HAND_COSTING_UP_TO_X_MORE:
+    elif effect.name == EffectName.MAY_TRASH_TREASURE_GAIN_TREASURE_TO_HAND_COSTING_UP_TO_X_MORE:
         choices = [Choice(game_state=game_state, action=TrashNoTreasureCardFromHandToGainTreasureCardToHandCostingUpTo3More())]
 
         for card in (c for c, f in hand.items() if is_treasure(c)):
-            gain_effect = Effect(EFFECT_NAME.GAIN_A_TREASURE_TO_HAND_COSTING_UP_TO, card.cost + effect.value)
+            gain_effect = Effect(EffectName.GAIN_A_TREASURE_TO_HAND_COSTING_UP_TO, card.cost + effect.value)
             new_game_state = game_state.prepend_effect(gain_effect)
             new_game_state = new_game_state.replace_current_player_kwargs(hand=remove_card(hand, card))
             choices.append(Choice(game_state=new_game_state,
                                   action=TrashTreasureCardFromHandToGainTreasureCardToHandCostingUpTo3More(card)))
         return offer_choice(game_state, choices, current_player_chooser, current_player_index)
 
-    elif effect.name == EFFECT_NAME.DISCARD_ANY_NUMBER_THEN_DRAW_THAT_MANY:
+    elif effect.name == EffectName.DISCARD_ANY_NUMBER_THEN_DRAW_THAT_MANY:
         # Iterate over every card, including duplicates
         for card in hand:
             discard_to_draw_game_state = (discard_specific_card_current_player(game_state, card)
-                                          .prepend_effect(Effect(EFFECT_NAME.DRAW_CARDS, 1)))
+                                          .prepend_effect(Effect(EffectName.DRAW_CARDS, 1)))
             choices = [Choice(game_state=discard_to_draw_game_state, action=DiscardCardToDrawACard(card)),
                        Choice(game_state=game_state, action=DontDiscardCardToDrawACard(card))]
             game_state = offer_choice(game_state, choices, current_player_chooser, current_player_index)
         return game_state
-    elif effect.name == EFFECT_NAME.MAY_PUT_ANY_CARD_FROM_DISCARD_PILE_ONTO_DECK:
+    elif effect.name == EffectName.MAY_PUT_ANY_CARD_FROM_DISCARD_PILE_ONTO_DECK:
         choices = [Choice(game_state=game_state, action=PutNoCardFromDiscardPileOntoDeck())]
         for card, freq in discard_pile.items():
             new_current_player = current_player._replace(discard_pile=remove_card(discard_pile, card))
@@ -734,27 +731,27 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
             choices.append(Choice(game_state=card_onto_deck_game_state, action=PutCardFromDiscardPileOntoDeck(card)))
         return offer_choice(game_state, choices, current_player_chooser, current_player_index)
 
-    elif effect.name == EFFECT_NAME.MAY_TRASH_A_COPPER_TO_PRODUCE_MONEY:
+    elif effect.name == EffectName.MAY_TRASH_A_COPPER_TO_PRODUCE_MONEY:
         choices = [Choice(game_state=game_state, action=DoNotTrashACopperFor3Money())]
         copper = card_name_to_card("copper")
         if copper in hand:
             new_game_state = (game_state
                               .replace_current_player_kwargs(hand=remove_card(hand, copper))
-                              .prepend_effect(Effect(EFFECT_NAME.PRODUCE_MONEY, effect.value)))
+                              .prepend_effect(Effect(EffectName.PRODUCE_MONEY, effect.value)))
             choices.append(Choice(game_state=new_game_state, action=TrashACopperFor3Money()))
         return offer_choice(game_state, choices, current_player_chooser, current_player_index)
 
-    elif effect.name == EFFECT_NAME.EACH_OTHER_PLAYER_DRAWS_A_CARD:
+    elif effect.name == EffectName.EACH_OTHER_PLAYER_DRAWS_A_CARD:
         new_players = [(p if index == game_state.current_player_index else draw_card(p))
                        for index, p in enumerate(game_state.players)]
         return game_state._replace(players=new_players)
-    elif effect.name == EFFECT_NAME.EACH_OTHER_PLAYER_GAINS_A_CURSE:
+    elif effect.name == EffectName.EACH_OTHER_PLAYER_GAINS_A_CURSE:
         curse = card_name_to_card("curse")
         for index in non_current_player_indices(game_state):
             game_state = gain_card_by_player_index(game_state, curse, index)
 
         return game_state
-    elif effect.name == EFFECT_NAME.EACH_OTHER_PLAYER_DISCARDS_DOWN_TO:
+    elif effect.name == EffectName.EACH_OTHER_PLAYER_DISCARDS_DOWN_TO:
         for other_player_index in non_current_player_indices(game_state):
             while num_cards(game_state.players[other_player_index].hand) > effect.value:
                 # TODO: Does game_state need to be rotated to enable the other chooser to see itself as the current player?
@@ -763,7 +760,7 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
                                           choosers[other_player_index],
                                           other_player_index)
         return game_state
-    elif effect.name == EFFECT_NAME.EACH_OTHER_PLAYER_BANDIT_EFFECT:
+    elif effect.name == EffectName.EACH_OTHER_PLAYER_BANDIT_EFFECT:
         # each other player reveals the top 2 cards of their deck, trashes a
         # revealed treasure other than copper, and discards the rest
         for other_player_index in non_current_player_indices(game_state):
@@ -809,7 +806,7 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
         raise ValueError(f"resolve_pending_effect does not support effect named '{effect.name}'")
 
 def do_cleanup_phase(game_state: GameState) -> GameState:
-    assert game_state.turn_phase == TURN_PHASES.CLEANUP
+    assert game_state.turn_phase == TurnPhase.CLEANUP
 
     # Discard your hand and any actions played
     new_discard_pile = add_card_counts(game_state.current_player().hand,
@@ -834,7 +831,7 @@ def do_cleanup_phase(game_state: GameState) -> GameState:
     game_state = game_state._replace(current_player_index=index)
 
     # Reset player state
-    game_state = game_state._replace(turn_phase=TURN_PHASES.ACTION, actions=1, buys=1, total_money=0)
+    game_state = game_state._replace(turn_phase=TurnPhase.ACTION, actions=1, buys=1, total_money=0)
 
     return game_state
 
@@ -925,7 +922,7 @@ def initial_game_state(player_names: List[str]) -> GameState:
                      buys=1,
                      total_money=0,
                      supply=dict_to_card_counts(initial_supply(num_players)),
-                     turn_phase=TURN_PHASES.ACTION)
+                     turn_phase=TurnPhase.ACTION)
 
 ################################################################################
 #                                                               Playing a Game #
@@ -957,16 +954,16 @@ def game_step(game_state: GameState, choosers: List) -> GameState:
 
     if len(game_state.pending_effects) > 0:
         return resolve_pending_effect(game_state, choosers)
-    elif game_state.turn_phase == TURN_PHASES.ACTION:
+    elif game_state.turn_phase == TurnPhase.ACTION:
         choices = action_phase_choices(game_state)
         return offer_choice(game_state, choices, current_player_chooser, current_player_index)
-    elif game_state.turn_phase == TURN_PHASES.TREASURE:
+    elif game_state.turn_phase == TurnPhase.TREASURE:
         choices = treasure_phase_choices(game_state)
         return offer_choice(game_state, choices, current_player_chooser, current_player_index)
-    elif game_state.turn_phase == TURN_PHASES.BUY:
+    elif game_state.turn_phase == TurnPhase.BUY:
         choices = buy_phase_choices(game_state)
         return offer_choice(game_state, choices, current_player_chooser, current_player_index)
-    elif game_state.turn_phase == TURN_PHASES.CLEANUP:
+    elif game_state.turn_phase == TurnPhase.CLEANUP:
         return do_cleanup_phase(game_state)
     else:
         raise ValueError("Unrecognized turn phase '{game_state.turn_phase}'")
@@ -974,7 +971,7 @@ def game_step(game_state: GameState, choosers: List) -> GameState:
 def game_flow(player_names: List[str], choosers: List):
     game_state = initial_game_state(player_names)
 
-    while not game_completed(game_state) or game_state.turn_phase != TURN_PHASES.CLEANUP:
+    while not game_completed(game_state) or game_state.turn_phase != TurnPhase.CLEANUP:
         game_state = game_step(game_state, choosers)
 
     print("----------------------------")
@@ -989,20 +986,20 @@ def game_flow(player_names: List[str], choosers: List):
     players_had_equal_number_of_turns = game_state.current_player_index != game_state.first_player_index
     if player_vps[0] == player_vps[1] and players_had_equal_number_of_turns:
         print("GAME OUTPUT: DRAW")
-        choosers[0]._game_outcome = GAME_OUTCOME.DRAW
-        choosers[1]._game_outcome = GAME_OUTCOME.DRAW
+        choosers[0]._game_outcome = GameOutcome.DRAW
+        choosers[1]._game_outcome = GameOutcome.DRAW
     elif player_vps[0] == player_vps[1] and not players_had_equal_number_of_turns:
         print(f"GAME OUTPUT: {game_state.players[1].name} WINS BY TIE-BREAKER")
-        choosers[0]._game_outcome = GAME_OUTCOME.LOSS
-        choosers[1]._game_outcome = GAME_OUTCOME.WIN
+        choosers[0]._game_outcome = GameOutcome.LOSS
+        choosers[1]._game_outcome = GameOutcome.WIN
     elif player_vps[1] > player_vps[0]:
         print(f"GAME OUTPUT: {game_state.players[1].name} WINS")
-        choosers[0]._game_outcome = GAME_OUTCOME.LOSS
-        choosers[1]._game_outcome = GAME_OUTCOME.WIN
+        choosers[0]._game_outcome = GameOutcome.LOSS
+        choosers[1]._game_outcome = GameOutcome.WIN
     elif player_vps[0] > player_vps[1]:
         print(f"GAME OUTPUT: {game_state.players[0].name} WINS")
-        choosers[0]._game_outcome = GAME_OUTCOME.WIN
-        choosers[1]._game_outcome = GAME_OUTCOME.LOSS
+        choosers[0]._game_outcome = GameOutcome.WIN
+        choosers[1]._game_outcome = GameOutcome.LOSS
     else:
         assert False
 
