@@ -117,7 +117,7 @@ def make_game_state(
         buys=1,
         total_money=0,
         pending_effects=()):
-    return GameState(players, current_player_index, max_turns_per_player, supply, turn_phase,
+    return GameState(players, first_player_index, current_player_index, max_turns_per_player, supply, turn_phase,
                      actions, buys, total_money, pending_effects)
 
 
@@ -184,7 +184,6 @@ class PutCardFromDiscardPileOntoDeck:
 
 @dataclass(frozen=True)
 class PutNoCardFromDiscardPileOntoDeck:
-    card: Card
 
     def get_description(self) -> str:
         return f"Put no card from discard pile onto deck"
@@ -224,6 +223,12 @@ class TrashTreasureCardFromHandToGainTreasureCardToHandCostingUpTo3More:
         return f"trash {self.card.name} from hand to gain a treasure card to hand costing up to 3 more."
 
 @dataclass(frozen=True)
+class TrashNoTreasureCardFromHandToGainTreasureCardToHandCostingUpTo3More:
+
+    def get_description(self) -> str:
+        return f"trash no card from hand to gain a treasure card to hand costing up to 3 more."
+
+@dataclass(frozen=True)
 class TrashACopperFor3Money:
 
     def get_description(self) -> str:
@@ -254,7 +259,7 @@ Action = (GainCard | GainNothing
           | TrashCardFromHand | TrashNoCardFromHand
           | TrashRevealedCard
           | TrashCardFromHandToGainCardCostingUpTo2More
-          | TrashTreasureCardFromHandToGainTreasureCardToHandCostingUpTo3More
+          | TrashTreasureCardFromHandToGainTreasureCardToHandCostingUpTo3More | TrashNoTreasureCardFromHandToGainTreasureCardToHandCostingUpTo3More
           | TrashACopperFor3Money | DoNotTrashACopperFor3Money
           | PlayAllTreasures)
 
@@ -496,7 +501,7 @@ def action_phase_choices(action_game_state: GameState) -> List[Choice]:
                                                 actions=action_game_state.actions - 1)
         game_state = move_specific_card_to_played_actions(game_state, action_card)
 
-        choices.append(Choice(game_state=game_state, action=PlayActionCard(action_Card)))
+        choices.append(Choice(game_state=game_state, action=PlayActionCard(action_card)))
 
     return choices
 
@@ -517,7 +522,6 @@ def buy_phase_choices(buy_game_state: GameState) -> List[Choice]:
     game_state_after_one_buy = buy_game_state._replace(turn_phase=turn_phase_after_one_buy,
                                                        buys=buy_game_state.buys-1)
 
-    player = buy_game_state.current_player()
     buyable_cards = cards_in_supply_costing_less_than(buy_game_state, buy_game_state.total_money)
 
     buy_choices = gainable_cards_to_choices(game_state_after_one_buy,
@@ -673,7 +677,7 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
     elif effect.name == EFFECT_NAME.GAIN_A_CARD_COSTING_UP_TO:
         gainable_cards = cards_in_supply_costing_less_than(game_state, effect.value)
         if len(gainable_cards) == 0:
-            single_choice = [Choice(game_state=game_state, action=GainNothing)]
+            single_choice = [Choice(game_state=game_state, action=GainNothing())]
             return offer_choice(game_state, single_choice, current_player_chooser, current_player_index)
         choices = gainable_cards_to_choices(game_state,
                                             gainable_cards,
@@ -684,13 +688,13 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
                           in cards_in_supply_costing_less_than(game_state, effect.value)
                           if is_treasure(card)]
         if len(gainable_cards) == 0:
-            single_choice = [Choice(game_state=game_state, action=GainNothing)]
+            single_choice = [Choice(game_state=game_state, action=GainNothing())]
             return offer_choice(game_state, single_choice, current_player_chooser, current_player_index)
         choices = gainable_cards_to_hand_to_choices(game_state, gainable_cards, "gain")
         return offer_choice(game_state, choices, current_player_chooser, current_player_index)
     elif effect.name == EFFECT_NAME.TRASH_GAIN_A_CARD_COSTING_UP_TO_X_MORE:
         if num_cards(hand) == 0:
-            single_choice = [Choice(game_state=game_state, action=GainNothing)]
+            single_choice = [Choice(game_state=game_state, action=GainNothing())]
             return offer_choice(game_state, single_choice, current_player_chooser, current_player_index)
 
         choices = []
@@ -702,7 +706,7 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
                                   action=TrashCardFromHandToGainCardCostingUpTo2More(card)))
         return offer_choice(game_state, choices, current_player_chooser, current_player_index)
     elif effect.name == EFFECT_NAME.MAY_TRASH_TREASURE_GAIN_TREASURE_TO_HAND_COSTING_UP_TO_X_MORE:
-        choices = [Choice(game_state=game_state, action=TrashNothing)]
+        choices = [Choice(game_state=game_state, action=TrashNoTreasureCardFromHandToGainTreasureCardToHandCostingUpTo3More())]
 
         for card in (c for c, f in hand.items() if is_treasure(c)):
             gain_effect = Effect(EFFECT_NAME.GAIN_A_TREASURE_TO_HAND_COSTING_UP_TO, card.cost + effect.value)
@@ -713,7 +717,7 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
         return offer_choice(game_state, choices, current_player_chooser, current_player_index)
 
     elif effect.name == EFFECT_NAME.DISCARD_ANY_NUMBER_THEN_DRAW_THAT_MANY:
-        # Iterate over every card, including duplicatest
+        # Iterate over every card, including duplicates
         for card in hand:
             discard_to_draw_game_state = (discard_specific_card_current_player(game_state, card)
                                           .prepend_effect(Effect(EFFECT_NAME.DRAW_CARDS, 1)))
@@ -786,9 +790,6 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
                 game_state = game_state.replace_player_by_index(other_player_index,
                                                                 other_player._replace(discard_pile=add_card(other_player.discard_pile, first_card)))
             elif revealed_cards_is_treasure_other_than_a_copper == [True, True]:
-                keep_first_card_discard_pile = add_card(other_player.discard_pile, first_card)
-                keep_second_card_discard_pile = add_card(other_player.discard_pile, second_card)
-
                 choices = [Choice(game_state.replace_player_by_index(other_player_index,
                                                                      other_player._replace(discard_pile=add_card(other_player.discard_pile, first_card))),
                                   action=TrashRevealedCard(second_card)),
