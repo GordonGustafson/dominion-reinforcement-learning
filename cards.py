@@ -803,9 +803,7 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
                                           other_player_index)
             else:
                 assert False
-            return game_state
-
-
+        return game_state
 
     else:
         raise ValueError(f"resolve_pending_effect does not support effect named '{effect.name}'")
