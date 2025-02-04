@@ -16,10 +16,10 @@ def game_outcome_to_reward(game_outcome: GameOutcome) -> float:
     elif game_outcome == GameOutcome.DRAW:
         return 0.5
     else:
-        assert False
+        raise ValueError("Unknown GameOutcome")
 
 def game_history_to_df(state_action_pairs: List[StateActionPair],
-                       game_outcome_for_player: List[GameOutcome],
+                       game_outcome_for_player: GameOutcome,
                        player_index: int):
     selected_game_states = (sap.possible_actions[sap.selected_action].game_state
                             for sap in state_action_pairs)

@@ -15,7 +15,7 @@ def game_outcome_to_number_of_wins(game_outcome: GameOutcome) -> float:
     elif game_outcome == GameOutcome.DRAW:
         return 0.5
     else:
-        assert False
+        raise ValueError(f"Unknown GameOutcome: {game_outcome}")
 
 def play_game(player_names, chooser_funcs) -> tuple[pd.DataFrame, dict[str, float]]:
     choosers = [Chooser(f) for f in chooser_funcs]

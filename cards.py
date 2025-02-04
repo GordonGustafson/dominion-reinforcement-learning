@@ -74,7 +74,6 @@ _GameStateBase = NamedTuple("GameState", [
     ("current_player_index", int),
     ("max_turns_per_player", int),
     ("supply", CardCounts),
-    # TODO: proper type annotation for this
     ("turn_phase", TurnPhase),
     ("actions", int),
     ("buys", int),
@@ -490,7 +489,7 @@ def initial_supply_base_cards(num_players: int) -> Dict[str, int]:
                 "duchy": 12,
                 "province": 12}
     else:
-        assert False, f"Invalid number of players: {num_players}"
+        raise ValueError(f"Invalid number of players: {num_players}")
 
 def initial_supply(num_players: int) -> Dict[str, int]:
     card_dict = initial_supply_base_cards(num_players)
