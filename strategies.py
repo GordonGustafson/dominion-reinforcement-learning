@@ -1,9 +1,11 @@
 from collections.abc import Callable
 
+from game import Choice
 from pytorch.dataloader import tensorify_dataframe
 
 import featurizer
 from cards import *
+
 
 def random_strategy(game_state: GameState, choices: List[Choice], player_index: int) -> int:
     return random.randrange(len(choices))
@@ -23,7 +25,7 @@ def user_chooser(game_state: GameState, choices: List[Choice], player_index: int
     print(f"{player.name} hand: {card_counts_to_dict(player.hand)}, deck: {card_counts_to_dict(player.deck)}, discard pile: {card_counts_to_dict(player.discard_pile)}, top of deck: {player.top_of_deck}")
     print(f"{player.name} money: {game_state.total_money}, actions: {game_state.actions}, hand: {card_counts_to_dict(player.hand)}")
     for i, choice in enumerate(choices):
-        print(f"{i}: {choice.description}")
+        print(f"{i}: {choice.action.get_description()}")
 
     selected_choice = read_int_from_stdin()
     while selected_choice not in range(0, len(choices)):
