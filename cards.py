@@ -989,9 +989,9 @@ def game_flow(player_names: List[str], choosers: List):
         choosers[0]._game_outcome = GameOutcome.DRAW
         choosers[1]._game_outcome = GameOutcome.DRAW
     elif player_vps[0] == player_vps[1] and not players_had_equal_number_of_turns:
-        print(f"GAME OUTPUT: {game_state.players[1].name} WINS BY TIE-BREAKER")
-        choosers[0]._game_outcome = GameOutcome.LOSS
-        choosers[1]._game_outcome = GameOutcome.WIN
+        print(f"GAME OUTPUT: {game_state.players[1-game_state.first_player_index].name} WINS BY TIE-BREAKER")
+        choosers[game_state.first_player_index]._game_outcome = GameOutcome.LOSS
+        choosers[1-game_state.first_player_index]._game_outcome = GameOutcome.WIN
     elif player_vps[1] > player_vps[0]:
         print(f"GAME OUTPUT: {game_state.players[1].name} WINS")
         choosers[0]._game_outcome = GameOutcome.LOSS
