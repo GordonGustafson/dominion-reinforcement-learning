@@ -33,14 +33,14 @@ def user_chooser(game_state: GameState, choices: List[Choice], player_index: int
 
     return int(selected_choice)
 
-def scikit_learn_model_strategy(scikit_learn_model) -> Callable[[GameState, List[Choice]], int]:
+def scikit_learn_state_scoring_model_strategy(scikit_learn_model) -> Callable[[GameState, List[Choice]], int]:
     def choose_with_model(game_state: GameState, choices: List[Choice], player_index: int) -> int:
         state_values = [scikit_learn_model.predict(featurizer.game_state_to_df(c.game_state, player_index)) for c in choices]
         return state_values.index(max(state_values))
 
     return choose_with_model
 
-def pytorch_model_strategy(pytorch_model) -> Callable[[GameState, List[Choice]], int]:
+def pytorch_state_scoring_model_strategy(pytorch_model) -> Callable[[GameState, List[Choice]], int]:
     def choose_with_model(game_state: GameState, choices: List[Choice], player_index: int) -> int:
         state_values = [pytorch_model.forward(tensorify_dataframe(featurizer.game_state_to_df(c.game_state, player_index))) for c in choices]
         return state_values.index(max(state_values))

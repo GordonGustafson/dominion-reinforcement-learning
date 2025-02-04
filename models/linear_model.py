@@ -15,7 +15,7 @@ def train_scikit_learn_linear_model():
     print(model.coef_)
     print(model.intercept_)
 
-    trained_chooser_func = strategies.scikit_learn_model_strategy(model)
+    trained_chooser_func = strategies.scikit_learn_state_scoring_model_strategy(model)
     trained_chooser_funcs = [trained_chooser_func] * 2
 
     trained_games_df, _ = play.play_n_games(["linear_model_1", "linear_model_2"], trained_chooser_funcs, n=2)
