@@ -1,4 +1,4 @@
-from cards import GameOutcome, GameOutcome
+from cards import GameOutcome
 from game import game_flow
 from chooser import Chooser
 
