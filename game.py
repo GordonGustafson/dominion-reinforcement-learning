@@ -8,14 +8,14 @@ from cards import GameState, TurnPhase, move_specific_card_to_played_actions, mo
     add_card_to_top_of_deck, \
     draw_card, \
     non_current_player_indices, gain_card_by_player_index, take_top_card_off_of_deck, is_treasure_other_than_a_copper, \
-    card_sequence_to_card_counts, add_card_counts, add_card, CARD_DEFS, num_copies_of_card, \
+    card_sequence_to_card_counts, add_card_counts, add_card, CARD_DICT, num_copies_of_card, \
     do_cleanup_phase, initial_game_state, get_total_player_vp, GameOutcome
 from actions import GainCard, GainNothing, GainCardToHand, PlayActionCard, PlayNoActionCard, DiscardCard, \
     DiscardCardToDrawACard, DontDiscardCardToDrawACard, PutCardFromDiscardPileOntoDeck, \
     PutNoCardFromDiscardPileOntoDeck, TrashCardFromHand, TrashNoCardFromHand, TrashRevealedCard, \
     TrashCardFromHandToGainCardCostingUpTo2More, TrashTreasureCardFromHandToGainTreasureCardToHandCostingUpTo3More, \
     TrashNoTreasureCardFromHandToGainTreasureCardToHandCostingUpTo3More, TrashACopperFor3Money, \
-    DoNotTrashACopperFor3Money, PlayAllTreasures, Action
+    DontTrashACopperFor3Money, PlayAllTreasures, Action
 
 ################################################################################
 #                                                                      Choices #
@@ -209,7 +209,7 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
         return offer_choice(game_state, choices, current_player_chooser, current_player_index)
 
     elif effect.name == EffectName.MAY_TRASH_A_COPPER_TO_PRODUCE_MONEY:
-        choices = [Choice(game_state=game_state, action=DoNotTrashACopperFor3Money())]
+        choices = [Choice(game_state=game_state, action=DontTrashACopperFor3Money())]
         copper = card_name_to_card("copper")
         if copper in hand:
             new_game_state = (game_state
@@ -298,8 +298,8 @@ def offer_choice(game_state, choices, chooser, player_index_making_choice: int) 
 def game_completed(game_state: GameState) -> bool:
     # distinguish between an card that has been fully bought up and a card that wasn't in the game
     # HACK for now assumes all cards defined are in the game
-    original_non_empty_piles = len(CARD_DEFS)
-    current_non_empty_piles = len([True for card in CARD_DEFS if game_state.supply.get(card, 0) == 0])
+    original_non_empty_piles = len(CARD_DICT)
+    current_non_empty_piles = len([True for card in CARD_DICT if game_state.supply.get(card, 0) == 0])
     num_empty_piles = original_non_empty_piles - current_non_empty_piles
     return (num_empty_piles >= 3
             or num_copies_of_card(game_state.supply, "province") == 0)

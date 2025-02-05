@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
-from cards import Card
+import typing
+from cards import Card, CARD_LIST
 
 
 @dataclass(frozen=True)
@@ -134,7 +135,7 @@ class TrashACopperFor3Money:
 
 
 @dataclass(frozen=True)
-class DoNotTrashACopperFor3Money:
+class DontTrashACopperFor3Money:
 
     def get_description(self) -> str:
         return f"do not trash a copper for 3 money"
@@ -148,17 +149,46 @@ class PlayAllTreasures:
     def get_description(self) -> str:
         return f"play all treasures"
 
-
 # We're modeling gaining and buying cards as the same action for now for better generalization.
-Action = (GainCard | GainNothing
-          | GainCardToHand
-          | PlayActionCard | PlayNoActionCard
-          | DiscardCard
-          | DiscardCardToDrawACard | DontDiscardCardToDrawACard
-          | PutCardFromDiscardPileOntoDeck | PutNoCardFromDiscardPileOntoDeck
-          | TrashCardFromHand | TrashNoCardFromHand
-          | TrashRevealedCard
-          | TrashCardFromHandToGainCardCostingUpTo2More
-          | TrashTreasureCardFromHandToGainTreasureCardToHandCostingUpTo3More | TrashNoTreasureCardFromHandToGainTreasureCardToHandCostingUpTo3More
-          | TrashACopperFor3Money | DoNotTrashACopperFor3Money
-          | PlayAllTreasures)
+_ACTION_TYPES_WITH_CARD_PARAMETER = [
+    GainCard,
+    GainCardToHand,
+    PlayActionCard,
+    DiscardCard,
+    DiscardCardToDrawACard,
+    DontDiscardCardToDrawACard,
+    PutCardFromDiscardPileOntoDeck,
+    TrashCardFromHand,
+    TrashRevealedCard,
+    TrashCardFromHandToGainCardCostingUpTo2More,
+    TrashTreasureCardFromHandToGainTreasureCardToHandCostingUpTo3More,
+]
+
+_ACTION_TYPES_WITHOUT_CARD_PARAMETER = [
+    GainNothing,
+    PlayNoActionCard,
+    PutNoCardFromDiscardPileOntoDeck,
+    TrashNoCardFromHand,
+    TrashNoTreasureCardFromHandToGainTreasureCardToHandCostingUpTo3More,
+    TrashACopperFor3Money,
+    DontTrashACopperFor3Money,
+    PlayAllTreasures,
+]
+
+Action = typing.Union[*(_ACTION_TYPES_WITH_CARD_PARAMETER + _ACTION_TYPES_WITHOUT_CARD_PARAMETER)]
+
+_ACTIONS_LIST = ([action_type(card)
+                 for action_type in _ACTION_TYPES_WITH_CARD_PARAMETER
+                 for card in CARD_LIST] +
+                 [action_type()
+                  for action_type in _ACTION_TYPES_WITHOUT_CARD_PARAMETER])
+
+_ACTION_TO_ACTION_ID = {action: action_id for action_id, action in enumerate(_ACTIONS_LIST)}
+
+def action_to_action_id(action: Action):
+    return _ACTION_TO_ACTION_ID[action]
+
+def action_id_to_action(action_id: int):
+    if action_id < 0:
+        raise ValueError(f"Invalid action_id: {action_id}")
+    return _ACTIONS_LIST[action_id]

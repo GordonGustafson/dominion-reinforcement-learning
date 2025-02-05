@@ -124,82 +124,90 @@ class GameOutcome:
     LOSS = "LOSS"
     DRAW = "DRAW"
 
-
-
 # TODO: should we use the same "money_produced" field for both treasures and actions?
-CARD_DEFS = {
-    "copper":   make_card(name="copper", cost=0, treasure_effects=(Effect(EffectName.PRODUCE_MONEY, 1),)),
-    "silver":   make_card(name="silver", cost=3, treasure_effects=(Effect(EffectName.PRODUCE_MONEY, 2),)),
-    "gold":     make_card(name="gold", cost=6, treasure_effects=(Effect(EffectName.PRODUCE_MONEY, 3),)),
+CARD_LIST = [
+    make_card(name="copper", cost=0, treasure_effects=(Effect(EffectName.PRODUCE_MONEY, 1),)),
+    make_card(name="silver", cost=3, treasure_effects=(Effect(EffectName.PRODUCE_MONEY, 2),)),
+    make_card(name="gold", cost=6, treasure_effects=(Effect(EffectName.PRODUCE_MONEY, 3),)),
 
-    "estate":   make_card(name="estate", cost=2, vp_effects=(Effect(EffectName.VP, 1),)),
-    "duchy":    make_card(name="duchy", cost=5, vp_effects=(Effect(EffectName.VP, 3),)),
-    "province": make_card(name="province", cost=8, vp_effects=(Effect(EffectName.VP, 6),)),
+    make_card(name="estate", cost=2, vp_effects=(Effect(EffectName.VP, 1),)),
+    make_card(name="duchy", cost=5, vp_effects=(Effect(EffectName.VP, 3),)),
+    make_card(name="province", cost=8, vp_effects=(Effect(EffectName.VP, 6),)),
 
-    "curse":    make_card(name="curse", cost=0, vp_effects=(Effect(EffectName.VP, -1),)),
+    make_card(name="curse", cost=0, vp_effects=(Effect(EffectName.VP, -1),)),
 
     # +cards
-    "smithy":    make_card(name="smithy", cost=4, action_effects=(Effect(EffectName.DRAW_CARDS, 3),)),
+    make_card(name="smithy", cost=4, action_effects=(Effect(EffectName.DRAW_CARDS, 3),)),
 
     # +actions
-    "laboratory": make_card(name="laboratory", cost=5, action_effects=(Effect(EffectName.DRAW_CARDS, 2), Effect(EffectName.PLUS_ACTIONS, 1))),
-    "village":    make_card(name="village", cost=3, action_effects=(Effect(EffectName.DRAW_CARDS, 1), Effect(EffectName.PLUS_ACTIONS, 2))),
+    make_card(name="laboratory", cost=5, action_effects=(Effect(EffectName.DRAW_CARDS, 2), Effect(EffectName.PLUS_ACTIONS, 1))),
+    make_card(name="village", cost=3, action_effects=(Effect(EffectName.DRAW_CARDS, 1), Effect(EffectName.PLUS_ACTIONS, 2))),
 
     # trashing cards
-    "chapel":     make_card(name="chapel", cost=2, action_effects=(Effect(EffectName.MAY_TRASH_A_CARD_FROM_YOUR_HAND, None),
-                                                                       Effect(EffectName.MAY_TRASH_A_CARD_FROM_YOUR_HAND, None),
-                                                                       Effect(EffectName.MAY_TRASH_A_CARD_FROM_YOUR_HAND, None),
-                                                                       Effect(EffectName.MAY_TRASH_A_CARD_FROM_YOUR_HAND, None))),
+    make_card(name="chapel", cost=2, action_effects=(Effect(EffectName.MAY_TRASH_A_CARD_FROM_YOUR_HAND, None),
+                                                     Effect(EffectName.MAY_TRASH_A_CARD_FROM_YOUR_HAND, None),
+                                                     Effect(EffectName.MAY_TRASH_A_CARD_FROM_YOUR_HAND, None),
+                                                     Effect(EffectName.MAY_TRASH_A_CARD_FROM_YOUR_HAND, None))),
 
     # gaining cards
-    "workshop":  make_card(name="workshop", cost=3, action_effects=(Effect(EffectName.GAIN_A_CARD_COSTING_UP_TO, 4),)),
-    "remodel":   make_card(name="remodel", cost=4, action_effects=(Effect(EffectName.TRASH_GAIN_A_CARD_COSTING_UP_TO_X_MORE, 2),)),
-    "mine":      make_card(name="mine", cost=5, action_effects=(Effect(EffectName.MAY_TRASH_TREASURE_GAIN_TREASURE_TO_HAND_COSTING_UP_TO_X_MORE, 3),)),
+    make_card(name="workshop", cost=3, action_effects=(Effect(EffectName.GAIN_A_CARD_COSTING_UP_TO, 4),)),
+    make_card(name="remodel", cost=4, action_effects=(Effect(EffectName.TRASH_GAIN_A_CARD_COSTING_UP_TO_X_MORE, 2),)),
+    make_card(name="mine", cost=5, action_effects=(Effect(EffectName.MAY_TRASH_TREASURE_GAIN_TREASURE_TO_HAND_COSTING_UP_TO_X_MORE, 3),)),
 
     # +buys
-    "festival":  make_card(name="festival", cost=5, action_effects=(Effect(EffectName.PLUS_ACTIONS, 2),
-                                                                    Effect(EffectName.PLUS_BUYS, 1),
-                                                                    Effect(EffectName.PRODUCE_MONEY, 2))),
-    "market":    make_card(name="market", cost=5, action_effects=(Effect(EffectName.PLUS_ACTIONS, 1),
-                                                                  Effect(EffectName.PLUS_BUYS, 1),
-                                                                  Effect(EffectName.PRODUCE_MONEY, 1, ),
-                                                                  Effect(EffectName.DRAW_CARDS, 1))),
+    make_card(name="festival", cost=5, action_effects=(Effect(EffectName.PLUS_ACTIONS, 2),
+                                                       Effect(EffectName.PLUS_BUYS, 1),
+                                                       Effect(EffectName.PRODUCE_MONEY, 2))),
+    make_card(name="market", cost=5, action_effects=(Effect(EffectName.PLUS_ACTIONS, 1),
+                                                     Effect(EffectName.PLUS_BUYS, 1),
+                                                     Effect(EffectName.PRODUCE_MONEY, 1, ),
+                                                     Effect(EffectName.DRAW_CARDS, 1))),
 
     # simple draw/discard effects
-    "cellar":    make_card(name="cellar", cost=2, action_effects=(Effect(EffectName.PLUS_ACTIONS, 1),
-                                                                  Effect(EffectName.DISCARD_ANY_NUMBER_THEN_DRAW_THAT_MANY, None))),
-    "harbinger": make_card(name="harbinger", cost=3, action_effects=(Effect(EffectName.PLUS_ACTIONS, 1),
-                                                                     Effect(EffectName.DRAW_CARDS, 1),
-                                                                     Effect(EffectName.MAY_PUT_ANY_CARD_FROM_DISCARD_PILE_ONTO_DECK, None))),
+    make_card(name="cellar", cost=2, action_effects=(Effect(EffectName.PLUS_ACTIONS, 1),
+                                                     Effect(EffectName.DISCARD_ANY_NUMBER_THEN_DRAW_THAT_MANY, None))),
+    make_card(name="harbinger", cost=3, action_effects=(Effect(EffectName.PLUS_ACTIONS, 1),
+                                                        Effect(EffectName.DRAW_CARDS, 1),
+                                                        Effect(EffectName.MAY_PUT_ANY_CARD_FROM_DISCARD_PILE_ONTO_DECK, None))),
     # {"name": "Poacher",      "cost": 4, "type": "action", EFFECT_NAME.DRAW_CARDS: 1, "actions": 1, @"+1$, discard a card per empty supply pile"
 
     # interacting with other cards
-    "moneylender": make_card(name="moneylender", cost=4, action_effects=(Effect(EffectName.MAY_TRASH_A_COPPER_TO_PRODUCE_MONEY, 3),)),
+    make_card(name="moneylender", cost=4, action_effects=(Effect(EffectName.MAY_TRASH_A_COPPER_TO_PRODUCE_MONEY, 3),)),
     # {"name": "Merchant",     "cost": 3, "type": "action", EFFECT_NAME.DRAW_CARDS: 1, "actions": 1, "the_first_time_you_play_a_silver_this_turn_+1_money": 1,
 
     # VP cards
     # {"name": "Gardens",      "cost": 4, "type": "victory", @"worth 1 vp per 10 cards you have (rounded down)"
 
     # attacks
-    "council room": make_card(name="council room", cost=5, action_effects=(Effect(EffectName.DRAW_CARDS, 4),
-                                                                           Effect(EffectName.PLUS_BUYS, 1),
-                                                                           Effect(EffectName.EACH_OTHER_PLAYER_DRAWS_A_CARD, None))),
-    "witch": make_card(name="witch", cost=5, action_effects=(Effect(EffectName.DRAW_CARDS, 2),
-                                                             Effect(EffectName.EACH_OTHER_PLAYER_GAINS_A_CURSE, None))),
-    "militia": make_card(name="militia", cost=4, action_effects=(Effect(EffectName.PRODUCE_MONEY, 2),
-                                                                 Effect(EffectName.EACH_OTHER_PLAYER_DISCARDS_DOWN_TO, 3))),
-    "bandit": make_card(name="bandit", cost=5, action_effects=(Effect(EffectName.GAIN_A_GOLD, None),
-                                                               Effect(EffectName.EACH_OTHER_PLAYER_BANDIT_EFFECT, None))),
-    # {"name": "Bureaucrat",   "cost": 4, "type": "action", @"gain a silver onto your deck. each other player reveals a victory card from their hand it puts it onto their deck (or reveals a hand with no victory cards)"
-    # {"name": "Moat",         "cost": 2, "type": "action", EFFECT_NAME.DRAW_CARDS: 2, "moat_effect": 1,
+    make_card(name="council room", cost=5, action_effects=(Effect(EffectName.DRAW_CARDS, 4),
+                                                           Effect(EffectName.PLUS_BUYS, 1),
+                                                           Effect(EffectName.EACH_OTHER_PLAYER_DRAWS_A_CARD, None))),
+    make_card(name="witch", cost=5, action_effects=(Effect(EffectName.DRAW_CARDS, 2),
+                                                    Effect(EffectName.EACH_OTHER_PLAYER_GAINS_A_CURSE, None))),
+    make_card(name="militia", cost=4, action_effects=(Effect(EffectName.PRODUCE_MONEY, 2),
+                                                      Effect(EffectName.EACH_OTHER_PLAYER_DISCARDS_DOWN_TO, 3))),
+    make_card(name="bandit", cost=5, action_effects=(Effect(EffectName.GAIN_A_GOLD, None),
+                                                     Effect(EffectName.EACH_OTHER_PLAYER_BANDIT_EFFECT, None))),
+# {"name": "Bureaucrat",   "cost": 4, "type": "action", @"gain a silver onto your deck. each other player reveals a victory card from their hand it puts it onto their deck (or reveals a hand with no victory cards)"
+# {"name": "Moat",         "cost": 2, "type": "action", EFFECT_NAME.DRAW_CARDS: 2, "moat_effect": 1,
 
-    # new types of game state or choices
-    # {"name": "Sentry",       "cost": 5, "type": "action", "actions": 1, @"+1 card . Look at the top 2 cards of your deck. Trash and/or discard any number of them, put the rest back on top in any order"
-    # {"name": "Throne Room",  "cost": 4, "type": "action", @"you may play an action card from your hand twice"
-    # {"name": "Vassal",       "cost": 3, "type": "action", "money_produced": 2, "Discard_the_top_card_of_your_deck_if_it's_an_action_card,_you_may_play_it": 1,
-    # {"name": "Artisan",      "cost": 6, "type": "action", @"gain a card to your hand costing up to $5. put a card from your hand onto your deck"
-    # {"name": "Library",      "cost": 5, "type": "action", @"draw until you have 7 cards in hand, skipping any action cards you choose to. Set those aside, discarding them afterwards"
-}
+# new types of game state or choices
+# {"name": "Sentry",       "cost": 5, "type": "action", "actions": 1, @"+1 card . Look at the top 2 cards of your deck. Trash and/or discard any number of them, put the rest back on top in any order"
+# {"name": "Throne Room",  "cost": 4, "type": "action", @"you may play an action card from your hand twice"
+# {"name": "Vassal",       "cost": 3, "type": "action", "money_produced": 2, "Discard_the_top_card_of_your_deck_if_it's_an_action_card,_you_may_play_it": 1,
+# {"name": "Artisan",      "cost": 6, "type": "action", @"gain a card to your hand costing up to $5. put a card from your hand onto your deck"
+# {"name": "Library",      "cost": 5, "type": "action", @"draw until you have 7 cards in hand, skipping any action cards you choose to. Set those aside, discarding them afterwards"
+]
+
+CARD_DICT = {card.name: card for card in CARD_LIST}
+
+
+CardId = int
+def card_id_to_card(card_id: CardId) -> Card:
+    return CARD_LIST[card_id]
+
+def card_to_card_id(card: Card) -> CardId:
+    return CARD_LIST.index(card)
 
 
 def empty_card_counts():
@@ -280,7 +288,7 @@ def non_current_player_indices(game_state: GameState):
 ################################################################################
 
 def card_name_to_card(card_name: str) -> Card:
-    return CARD_DEFS[card_name]
+    return CARD_DICT[card_name]
 
 def add_card_by_name(card_counts: CardCounts, card_name: str) -> CardCounts:
     card = card_name_to_card(card_name)
