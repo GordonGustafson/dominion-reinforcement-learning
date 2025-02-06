@@ -291,7 +291,7 @@ def offer_choice(game_state, choices, chooser, player_index_making_choice: int) 
     # Keeping game_state as an argument, even though it may not be needed by value function approximation
     selected_choice_index = chooser.make_choice(game_state, choices, player_index_making_choice)
     selected_choice = choices[selected_choice_index]
-    print(f"{player_name}: {selected_choice.action.get_description()}")
+    # print(f"{player_name}: {selected_choice.action.get_description()}")
     return selected_choice.game_state
 
 
@@ -332,9 +332,8 @@ def game_flow(player_names: List[str], choosers: List):
     while not game_completed(game_state) or game_state.turn_phase != TurnPhase.CLEANUP:
         game_state = game_step(game_state, choosers)
 
-    print("----------------------------")
-    for i, player in enumerate(game_state.players):
-        print(f"{player.name} score: {get_total_player_vp(player)}")
+    # for i, player in enumerate(game_state.players):
+    #     print(f"{player.name} score: {get_total_player_vp(player)}")
 
     # Hardcoding logic to assume two players for now. With three there can be
     # two players that draw and one that loses.
@@ -343,22 +342,22 @@ def game_flow(player_names: List[str], choosers: List):
     # game_state.current_player_index had the last turn.
     players_had_equal_number_of_turns = game_state.current_player_index != game_state.first_player_index
     if player_vps[0] == player_vps[1] and players_had_equal_number_of_turns:
-        print("GAME OUTPUT: DRAW")
+        # print("GAME OUTPUT: DRAW")
         choosers[0]._game_outcome = GameOutcome.DRAW
         choosers[1]._game_outcome = GameOutcome.DRAW
     elif player_vps[0] == player_vps[1] and not players_had_equal_number_of_turns:
-        print(f"GAME OUTPUT: {game_state.players[1-game_state.first_player_index].name} WINS BY TIE-BREAKER")
+        # print(f"GAME OUTPUT: {game_state.players[1-game_state.first_player_index].name} WINS BY TIE-BREAKER")
         choosers[game_state.first_player_index]._game_outcome = GameOutcome.LOSS
         choosers[1-game_state.first_player_index]._game_outcome = GameOutcome.WIN
     elif player_vps[1] > player_vps[0]:
-        print(f"GAME OUTPUT: {game_state.players[1].name} WINS")
+        # print(f"GAME OUTPUT: {game_state.players[1].name} WINS")
         choosers[0]._game_outcome = GameOutcome.LOSS
         choosers[1]._game_outcome = GameOutcome.WIN
     elif player_vps[0] > player_vps[1]:
-        print(f"GAME OUTPUT: {game_state.players[0].name} WINS")
+        # print(f"GAME OUTPUT: {game_state.players[0].name} WINS")
         choosers[0]._game_outcome = GameOutcome.WIN
         choosers[1]._game_outcome = GameOutcome.LOSS
     else:
         assert False
 
-    print(f"max turns per player: {game_state.max_turns_per_player}")
+    # print(f"max turns per player: {game_state.max_turns_per_player}")

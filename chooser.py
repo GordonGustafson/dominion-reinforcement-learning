@@ -3,6 +3,7 @@ from cards import *
 from typing import List, Optional
 
 from game import Choice, StateActionPair
+import torch
 
 
 class Chooser(object):
@@ -10,9 +11,10 @@ class Chooser(object):
         self._chooser_func = chooser_func
         self._state_action_pairs: List[StateActionPair] = []
         self._game_outcome: Optional[GameOutcome] = None
+        self.action_probability_tensors: List[torch.Tensor] = []
 
     def make_choice(self, game_state: GameState, choices: List[Choice], player_index: int) -> int:
-        selected_action = self._chooser_func(game_state, choices, player_index)
+        selected_action = self._chooser_func(self, game_state, choices, player_index)
 
         state_action_pair = StateActionPair(state=game_state,
                                             possible_actions=choices,

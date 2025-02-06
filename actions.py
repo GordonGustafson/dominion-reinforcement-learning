@@ -185,6 +185,8 @@ _ACTIONS_LIST = ([action_type(card)
 
 _ACTION_TO_ACTION_ID = {action: action_id for action_id, action in enumerate(_ACTIONS_LIST)}
 
+NUM_ACTIONS = len(_ACTIONS_LIST)
+
 def action_to_action_id(action: Action):
     return _ACTION_TO_ACTION_ID[action]
 

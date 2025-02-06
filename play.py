@@ -17,8 +17,7 @@ def game_outcome_to_number_of_wins(game_outcome: GameOutcome) -> float:
     else:
         raise ValueError(f"Unknown GameOutcome: {game_outcome}")
 
-def play_game(player_names, chooser_funcs) -> tuple[pd.DataFrame, dict[str, float]]:
-    choosers = [Chooser(f) for f in chooser_funcs]
+def play_game(player_names, choosers) -> tuple[pd.DataFrame, dict[str, float]]:
     game_flow(player_names, choosers)
     list_of_game_dfs = [featurizer.game_history_to_df(chooser._state_action_pairs,
                                                       chooser._game_outcome,
@@ -33,8 +32,8 @@ def play_game(player_names, chooser_funcs) -> tuple[pd.DataFrame, dict[str, floa
 
     return game_df, player_name_to_number_of_wins
 
-def play_n_games(player_names, chooser_funcs, n: int) -> tuple[pd.DataFrame, dict[str, float]]:
-    list_of_tuples = [play_game(player_names, chooser_funcs) for _ in range(n)]
+def play_n_games(player_names, choosers, n: int) -> tuple[pd.DataFrame, dict[str, float]]:
+    list_of_tuples = [play_game(player_names, choosers) for _ in range(n)]
     game_dfs, player_name_to_number_of_wins_dicts = zip(*list_of_tuples)
     game_df = pd.concat(game_dfs, axis="index", ignore_index=True)
 

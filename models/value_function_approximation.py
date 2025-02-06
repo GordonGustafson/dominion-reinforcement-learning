@@ -1,3 +1,4 @@
+from chooser import Chooser
 from pytorch.dataloader import DominionDataset, collate_fn
 
 import torch
@@ -75,14 +76,16 @@ def train_value_function_approximation_model():
 
     for epsilon in epsilons:
         model.eval()
-        strategy = strategies.wrap_with_epsilon_greedy(strategies.pytorch_state_scoring_model_strategy(model), epsilon=epsilon)
-        games_df, player_name_to_number_of_wins = play.play_n_games(["model_1", "model_2"], [strategy] * 2, n=num_games_per_data_collection_round)
+        strategy = strategies.wrap_with_epsilon_greedy(strategies.pytorch_max_state_score_strategy(model), epsilon=epsilon)
+        choosers = [Chooser(s) for s in [strategy] * 2]
+        games_df, player_name_to_number_of_wins = play.play_n_games(["model_1", "model_2"], choosers, n=num_games_per_data_collection_round)
         model.train()
         train_pytorch_model(games_df, model, num_epochs=num_epochs_per_data_collection_round, batch_size=batch_size)
 
     model.eval()
     model_games, win_rates = play.play_n_games(["model_chooser", "big_money_provinces_only"],
-                                               [strategies.pytorch_state_scoring_model_strategy(model), strategies.big_money_provinces_only],
+                                               [Chooser(strategies.pytorch_max_state_score_strategy(model)),
+                                                Chooser(strategies.big_money_provinces_only)],
                                                n=100)
     print(win_rates)
     for parameter in model.parameters():

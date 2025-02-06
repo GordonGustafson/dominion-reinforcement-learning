@@ -44,7 +44,9 @@ def game_state_to_dict(game_state: GameState, player_index: int) -> dict[str, An
 
 
     non_player_state_dict = {"player_vp_lead": player_vp_lead,
-                             "num_provinces_remaining": num_provinces}
+                             "num_provinces_remaining": num_provinces,
+                             # TODO: Find a way to remove this -10 heuristic I'm trying out
+                             "max_turns_per_player": game_state.max_turns_per_player - 10}
 
     player_dict = player_to_dict(game_state.players[player_index], suffix="_self")
     opponent_dict = player_to_dict(game_state.players[opponent_index], suffix="_opponent")
