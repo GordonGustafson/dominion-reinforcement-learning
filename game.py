@@ -17,6 +17,9 @@ from actions import GainCard, GainNothing, GainCardToHand, PlayActionCard, PlayN
     TrashNoTreasureCardFromHandToGainTreasureCardToHandCostingUpTo3More, TrashACopperFor3Money, \
     DontTrashACopperFor3Money, PlayAllTreasures, Action
 
+
+MAX_TURNS = 100
+
 ################################################################################
 #                                                                      Choices #
 ################################################################################
@@ -329,7 +332,9 @@ def game_step(game_state: GameState, choosers: List) -> GameState:
 def game_flow(player_names: List[str], choosers: List):
     game_state = initial_game_state(player_names)
 
-    while not game_completed(game_state) or game_state.turn_phase != TurnPhase.CLEANUP:
+    # TODO: This gives the first player one more turn than everyone else when the game ends by reaching the turn limit.
+    while (game_state.max_turns_per_player < MAX_TURNS
+           and (not game_completed(game_state) or game_state.turn_phase != TurnPhase.CLEANUP)):
         game_state = game_step(game_state, choosers)
 
     # for i, player in enumerate(game_state.players):
@@ -342,19 +347,19 @@ def game_flow(player_names: List[str], choosers: List):
     # game_state.current_player_index had the last turn.
     players_had_equal_number_of_turns = game_state.current_player_index != game_state.first_player_index
     if player_vps[0] == player_vps[1] and players_had_equal_number_of_turns:
-        # print("GAME OUTPUT: DRAW")
+        print("GAME OUTCOME: DRAW")
         choosers[0]._game_outcome = GameOutcome.DRAW
         choosers[1]._game_outcome = GameOutcome.DRAW
     elif player_vps[0] == player_vps[1] and not players_had_equal_number_of_turns:
-        # print(f"GAME OUTPUT: {game_state.players[1-game_state.first_player_index].name} WINS BY TIE-BREAKER")
+        print(f"GAME OUTCOME: {game_state.players[1-game_state.first_player_index].name} WINS BY TIE-BREAKER")
         choosers[game_state.first_player_index]._game_outcome = GameOutcome.LOSS
         choosers[1-game_state.first_player_index]._game_outcome = GameOutcome.WIN
     elif player_vps[1] > player_vps[0]:
-        # print(f"GAME OUTPUT: {game_state.players[1].name} WINS")
+        print(f"GAME OUTCOME: {game_state.players[1].name} WINS")
         choosers[0]._game_outcome = GameOutcome.LOSS
         choosers[1]._game_outcome = GameOutcome.WIN
     elif player_vps[0] > player_vps[1]:
-        # print(f"GAME OUTPUT: {game_state.players[0].name} WINS")
+        print(f"GAME OUTCOME: {game_state.players[0].name} WINS")
         choosers[0]._game_outcome = GameOutcome.WIN
         choosers[1]._game_outcome = GameOutcome.LOSS
     else:

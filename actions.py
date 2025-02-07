@@ -152,27 +152,27 @@ class PlayAllTreasures:
 # We're modeling gaining and buying cards as the same action for now for better generalization.
 _ACTION_TYPES_WITH_CARD_PARAMETER = [
     GainCard,
-    GainCardToHand,
-    PlayActionCard,
-    DiscardCard,
-    DiscardCardToDrawACard,
-    DontDiscardCardToDrawACard,
-    PutCardFromDiscardPileOntoDeck,
-    TrashCardFromHand,
-    TrashRevealedCard,
-    TrashCardFromHandToGainCardCostingUpTo2More,
-    TrashTreasureCardFromHandToGainTreasureCardToHandCostingUpTo3More,
+#    GainCardToHand,
+#    PlayActionCard,
+#    DiscardCard,
+#    DiscardCardToDrawACard,
+#    DontDiscardCardToDrawACard,
+#    PutCardFromDiscardPileOntoDeck,
+#    TrashCardFromHand,
+#    TrashRevealedCard,
+#    TrashCardFromHandToGainCardCostingUpTo2More,
+#    TrashTreasureCardFromHandToGainTreasureCardToHandCostingUpTo3More,
 ]
 
 _ACTION_TYPES_WITHOUT_CARD_PARAMETER = [
     GainNothing,
-    PlayNoActionCard,
-    PutNoCardFromDiscardPileOntoDeck,
-    TrashNoCardFromHand,
-    TrashNoTreasureCardFromHandToGainTreasureCardToHandCostingUpTo3More,
-    TrashACopperFor3Money,
-    DontTrashACopperFor3Money,
-    PlayAllTreasures,
+#    PlayNoActionCard,
+#    PutNoCardFromDiscardPileOntoDeck,
+#    TrashNoCardFromHand,
+#    TrashNoTreasureCardFromHandToGainTreasureCardToHandCostingUpTo3More,
+#    TrashACopperFor3Money,
+#    DontTrashACopperFor3Money,
+#    PlayAllTreasures,
 ]
 
 Action = typing.Union[*(_ACTION_TYPES_WITH_CARD_PARAMETER + _ACTION_TYPES_WITHOUT_CARD_PARAMETER)]

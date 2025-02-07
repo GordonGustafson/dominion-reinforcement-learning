@@ -17,6 +17,8 @@ import play
 from torch.utils.data import IterableDataset
 
 
+MAX_EPOCHS=800
+
 
 class DatasetFromCallable(IterableDataset):
     def __init__(self, generate_batch: Callable) -> None:
@@ -71,19 +73,30 @@ class PolicyGradientModel(L.LightningModule):
         pass
 
     def configure_optimizers(self):
-        return torch.optim.AdamW(self.model.parameters(),
-                                 # math.exp(-2) too large, math.exp(-6) too small
-                                 lr=math.exp(-4),
-                                 betas=(0.9, 0.999),
-                                 weight_decay=0.00)
+        optimizer = torch.optim.AdamW(self.model.parameters(),
+                                      # math.exp(-2) too large, math.exp(-6) too small
+                                      lr=math.exp(-4),
+                                      betas=(0.9, 0.999),
+                                      weight_decay=0)
+        # lr_scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer,
+        #                                                    max_lr=math.exp(-3),
+        #                                                    total_steps=MAX_EPOCHS,
+        #                                                    anneal_strategy='cos',
+        #                                                    cycle_momentum=True,
+        #                                                    base_momentum=0.85,
+        #                                                    max_momentum=0.95,
+        #                                                    div_factor=math.exp(1),
+        #                                                    final_div_factor=math.exp(1))
+        return {"optimizer": optimizer,
+        #        "lr_scheduler": lr_scheduler,
+                }
 
 def train_reinforce_model():
-    num_input_features = 5
-    hidden_layer_width = 4
+    num_input_features = 7
+    hidden_layer_width = 8
     num_model_outputs = NUM_ACTIONS
     model = torch.nn.Sequential(
         # torch.nn.BatchNorm1d(num_input_features, affine=False),
-
         torch.nn.Linear(num_input_features, hidden_layer_width),
         torch.nn.ReLU(),
         # torch.nn.BatchNorm1d(hidden_layer_width, affine=True),
@@ -91,7 +104,7 @@ def train_reinforce_model():
         torch.nn.Linear(hidden_layer_width, num_model_outputs, bias=True)
     )
     wrapped_model = PolicyGradientModel(model=model)
-    trainer = L.Trainer(max_epochs=800)
+    trainer = L.Trainer(max_epochs=MAX_EPOCHS)
     trainer.fit(model=wrapped_model)
 
     model.eval()

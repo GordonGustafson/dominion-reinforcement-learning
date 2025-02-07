@@ -1,5 +1,5 @@
 * REINFORCE
-** 5 input features
+** 5 input features, 1 hidden layer with 4 nodes, weight decay=0
 *** batch size of 2 games, 200 epochs
 **** lr=math.exp(-5)
 {'model_chooser': 12.0, 'big_money_provinces_only': 38.0}
@@ -9,10 +9,15 @@
 {'model_chooser': 6.0, 'big_money_provinces_only': 44.0}
 
 *** batch size of 1 games, 800 epochs
+**** lr=math.exp(-5)
+{'model_chooser': 33.0, 'big_money_provinces_only': 17.0}
+{'model_chooser': 34.5, 'big_money_provinces_only': 15.5}
+
 **** lr=math.exp(-4)
 {'model_chooser': 42.5, 'big_money_provinces_only': 7.5}
-real	2m1.348s
-***** weights
+{'model_chooser': 32.0, 'big_money_provinces_only': 18.0}
+
+***** weights of 42.5 win rate
 tensor([[-0.1238,  1.1100,  1.2049,  1.0863,  0.4670],
         [ 0.3293,  0.5574,  0.5924, -0.0386, -1.7670],
         [-0.2883,  0.0991, -0.2950,  0.0357, -0.8173],
@@ -28,20 +33,91 @@ tensor([[-0.9407, -0.2583,  0.2723, -0.0325],
         [-0.4612,  0.1401, -0.1856, -0.0296]])
 tensor([ 0.2531, -0.0576,  0.0478, -0.1689,  0.1228,  0.8175, -1.1676, -0.6896])
 
+
+**** lr=math.exp(-3)
+{'model_chooser': 2.0, 'big_money_provinces_only': 48.0}
+
 *** batch size of 2 games, 400 epochs
 **** lr=math.exp(-4)
 {'model_chooser': 7.5, 'big_money_provinces_only': 42.5}
-real	2m3.732s
 
 *** batch size of 4 games, 200 epochs
 **** lr=math.exp(-4)
 {'model_chooser': 29.0, 'big_money_provinces_only': 21.0}
-real	2m51.959s
+
+*** batch size of 1 games, 1600 epochs
+**** lr=math.exp(-4)
+{'model_chooser': 43.0, 'big_money_provinces_only': 7.0}
+{'model_chooser': 43.0, 'big_money_provinces_only': 7.0}
+
+** 5 input features, 1 hidden layer with 8 nodes, weight_decay=0
+*** batch size of 1 games, 1600 epochs
+**** lr=math.exp(-4)
+{'model_chooser': 44.5, 'big_money_provinces_only': 5.5}
+{'model_chooser': 33.0, 'big_money_provinces_only': 17.0}
+
+** 5 input features, 1 hidden layer with 16 nodes, weight_decay=0
+*** batch size of 1 games, 1600 epochs
+**** lr=math.exp(-4)
+{'model_chooser': 40.5, 'big_money_provinces_only': 9.5}
+{'model_chooser': 33.0, 'big_money_provinces_only': 17.0}
+
+** 5 input features, 1 hidden layer with 4 nodes, lr=math.exp(-4), weight decay=non-zero
+*** batch size of 1 games, 1600 epochs
+**** weight_decay=math.exp(-5)
+{'model_chooser': 25.5, 'big_money_provinces_only': 24.5}
+**** weight_decay=math.exp(-4)
+{'model_chooser': 37.5, 'big_money_provinces_only': 12.5}
+**** weight_decay=math.exp(-3)
+{'model_chooser': 1.5, 'big_money_provinces_only': 48.5}
+
+** 7 input features, lr=math.exp(-4)
+*** batch size of 1 games, 800 epochs
+**** 1 hidden layer with 8 nodes, ReLU, weight_decay=0
+{'model_chooser': 39.5, 'big_money_provinces_only': 10.5}
+
+*** batch size of 1 games, 1600 epochs
+**** 1 hidden layer with 8 nodes, ReLU, weight_decay=0
+{'model_chooser': 39.0, 'big_money_provinces_only': 11.0}
+**** 1 hidden layer with 4 nodes, ReLU, weight_decay=math.exp(-5)
+{'model_chooser': 39.0, 'big_money_provinces_only': 11.0}
+**** 1 hidden layer with 8 nodes, ReLU, weight_decay=math.exp(-5)
+{'model_chooser': 38.5, 'big_money_provinces_only': 11.5}
+**** 1 hidden layer with 4 nodes, LeakyRelu, weight_decay=math.exp(-5)
+{'model_chooser': 42.5, 'big_money_provinces_only': 7.5}
+
+** 7 input features, weight decay=0, batch size of 1 games, 1600 epochs
+*** OneCycleLR(max_lr=math.exp(-1), total_steps=MAX_EPOCHS, pct_start=0.3, anneal_strategy='cos', cycle_momentum=True, base_momentum=0.85, max_momentum=0.95, div_factor=math.exp(3), final_div_factor=math.exp(5))
+{'model_chooser': 0.0, 'big_money_provinces_only': 50.0}
+
+*** OneCycleLR(max_lr=math.exp(-1), total_steps=MAX_EPOCHS, pct_start=0.3, anneal_strategy='cos', cycle_momentum=True, base_momentum=0.85, max_momentum=0.95, div_factor=math.exp(3), final_div_factor=math.exp(3))
+{'model_chooser': 0.0, 'big_money_provinces_only': 50.0}
+
+
+*** OneCycleLR(max_lr=math.exp(-2), total_steps=MAX_EPOCHS, pct_start=0.3, anneal_strategy='cos', cycle_momentum=True, base_momentum=0.85, max_momentum=0.95, div_factor=math.exp(2), final_div_factor=math.exp(4))
+{'model_chooser': 30.0, 'big_money_provinces_only': 20.0}
+
+*** OneCycleLR(max_lr=math.exp(-2), total_steps=MAX_EPOCHS, pct_start=0.3, anneal_strategy='cos', cycle_momentum=True, base_momentum=0.85, max_momentum=0.95, div_factor=math.exp(2), final_div_factor=math.exp(3))
+{'model_chooser': 30.0, 'big_money_provinces_only': 20.0}
+
+*** OneCycleLR(max_lr=math.exp(-2), total_steps=MAX_EPOCHS, pct_start=0.3, anneal_strategy='cos', cycle_momentum=True, base_momentum=0.85, max_momentum=0.95, div_factor=math.exp(2), final_div_factor=math.exp(2))
+{'model_chooser': 0.0, 'big_money_provinces_only': 50.0}
+
+*** OneCycleLR(max_lr=math.exp(-2), total_steps=MAX_EPOCHS, pct_start=0.3, anneal_strategy='cos', cycle_momentum=True, base_momentum=0.85, max_momentum=0.95, div_factor=math.exp(2), final_div_factor=math.exp(1))
+{'model_chooser': 0.0, 'big_money_provinces_only': 50.0}
+
+*** OneCycleLR(max_lr=math.exp(-2), total_steps=MAX_EPOCHS, pct_start=0.3, anneal_strategy='cos', cycle_momentum=True, base_momentum=0.85, max_momentum=0.95, div_factor=math.exp(2), final_div_factor=math.exp(0))
+{'model_chooser': 23.5, 'big_money_provinces_only': 26.5}
+
+
+*** OneCycleLR(max_lr=math.exp(-3), total_steps=MAX_EPOCHS, pct_start=0.3, anneal_strategy='cos', cycle_momentum=True, base_momentum=0.85, max_momentum=0.95, div_factor=math.exp(1), final_div_factor=math.exp(1))
+{'model_chooser': 17.5, 'big_money_provinces_only': 32.5}
 
 
 
 
-* Best model ever trained:
+
+* OLD record for best model ever trained:
 {'model_chooser': 79.0, 'big_money_provinces_only': 21.0}
 (don't have weights, it was a 4 parameter linear model maybe with bias)
 

@@ -24,8 +24,10 @@ def tensorify_inputs(df: pd.DataFrame) -> torch.tensor:
                             "num_provinces_remaining",
                             "average_treasure_value_self",
                             "average_treasure_value_opponent",
-                            "max_turns_per_player"
-                            ]].to_numpy().reshape((-1, 5)))
+                            "max_turns_per_player",
+                            "two_provinces_remaining",
+                            "one_province_remaining",
+                        ]].to_numpy().reshape((-1, 7)))
 
 def tensorify_reward(df: pd.DataFrame) -> torch.tensor:
     return torch.tensor(df[["reward"]].to_numpy().squeeze())
