@@ -32,12 +32,13 @@ def concat_zero_dimensional_tensors(zero_dimensional_tensors: list[torch.Tensor]
     return torch.cat(one_dimensional_tensors)
 
 class PolicyGradientModel(L.LightningModule):
-    def __init__(self, model):
+    def __init__(self, policy_model):
         super().__init__()
-        self.model = model
+        self.policy_model = policy_model
+        self.automatic_optimization = False
 
     def generate_batch(self):
-        choosers = [Chooser(f) for f in [strategies.pytorch_sampled_action_strategy(self.model)] * 2]
+        choosers = [Chooser(f) for f in [strategies.pytorch_sampled_action_strategy(self.policy_model)] * 2]
         model_games, _ = play.play_n_games(
             player_names=["model_1", "model_2"],
             choosers=choosers,
@@ -50,21 +51,29 @@ class PolicyGradientModel(L.LightningModule):
 
     def train_dataloader(self):
         dataset = DatasetFromCallable(self.generate_batch)
-        # DON'T SET THIS! Set the argument to play_n_games in generate_batch instead.
+        # DON'T SET batch_size HERE! Set the argument to play_n_games in generate_batch instead.
         # I'm not sure why setting the batch size doesn't seem to work.
         return DataLoader(dataset=dataset, batch_size=1)
 
     def forward(self, batch, batch_idx):
         features, reward = batch
-        action_scores = self.model.forward(features)
+        action_scores = self.policy_model.forward(features)
         return action_scores
 
-    def training_step(self, batch, batch_idx):
-        for parameter in self.model.parameters():
-            print(parameter.data)
+    def compute_loss(self, batch):
         selected_action_probabilities, rewards = batch  # shape: (N, D), (N, 1)
         train_loss_items = - torch.log(selected_action_probabilities) * (rewards - 0.5)
         return train_loss_items.sum()
+
+    def training_step(self, batch, batch_idx):
+        for parameter in self.policy_model.parameters():
+            print(parameter.data)
+
+        opt = self.optimizers()
+        opt.zero_grad()
+        loss = self.compute_loss(batch)
+        self.manual_backward(loss)
+        opt.step()
 
     def validation_step(self, batch, batch_idx):
         pass
@@ -73,7 +82,7 @@ class PolicyGradientModel(L.LightningModule):
         pass
 
     def configure_optimizers(self):
-        optimizer = torch.optim.AdamW(self.model.parameters(),
+        optimizer = torch.optim.AdamW(self.policy_model.parameters(),
                                       # math.exp(-2) too large, math.exp(-6) too small
                                       lr=math.exp(-4),
                                       betas=(0.9, 0.999),
@@ -87,9 +96,7 @@ class PolicyGradientModel(L.LightningModule):
         #                                                    max_momentum=0.95,
         #                                                    div_factor=math.exp(1),
         #                                                    final_div_factor=math.exp(1))
-        return {"optimizer": optimizer,
-        #        "lr_scheduler": lr_scheduler,
-                }
+        return [optimizer]
 
 def train_reinforce_model():
     num_input_features = 7
@@ -103,7 +110,7 @@ def train_reinforce_model():
 
         torch.nn.Linear(hidden_layer_width, num_model_outputs, bias=True)
     )
-    wrapped_model = PolicyGradientModel(model=model)
+    wrapped_model = PolicyGradientModel(policy_model=model)
     trainer = L.Trainer(max_epochs=MAX_EPOCHS)
     trainer.fit(model=wrapped_model)
 
