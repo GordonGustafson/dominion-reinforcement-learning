@@ -19,13 +19,13 @@ def game_outcome_to_number_of_wins(game_outcome: GameOutcome) -> float:
 
 def play_game(player_names, choosers) -> tuple[pd.DataFrame, dict[str, float]]:
     game_flow(player_names, choosers)
-    list_of_game_dfs = [featurizer.game_history_to_df(chooser._state_action_pairs,
-                                                      chooser._game_outcome,
+    list_of_game_dfs = [featurizer.game_history_to_df(chooser.state_action_pairs,
+                                                      chooser.game_outcome,
                                                       player_index)
                         for player_index, chooser in enumerate(choosers)]
     game_df = pd.concat(list_of_game_dfs, axis="index", ignore_index=True)
     player_name_to_number_of_wins = {
-        player_name: game_outcome_to_number_of_wins(chooser._game_outcome)
+        player_name: game_outcome_to_number_of_wins(chooser.game_outcome)
         for player_name, chooser
         in zip(player_names, choosers)
     }

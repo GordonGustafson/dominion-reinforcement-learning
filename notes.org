@@ -1,4 +1,16 @@
+* TODO PPO
+* TODO Play 50 games against a baseline strategy every N epochs and plot the result
+* TODO Why do models seem to stop changing?
+** TODO Plot gradient magnitude over time
+
 * REINFORCE
+** BEST MODEL (don't have weights)
+5 input features, 1 hidden layer with 8 nodes, weight_decay=0
+batch size of 1 games, 1600 epochs
+lr=math.exp(-4)
+{'model_chooser': 44.5, 'big_money_provinces_only': 5.5}
+
+
 ** 5 input features, 1 hidden layer with 4 nodes, weight decay=0
 *** batch size of 2 games, 200 epochs
 **** lr=math.exp(-5)
@@ -112,6 +124,149 @@ tensor([ 0.2531, -0.0576,  0.0478, -0.1689,  0.1228,  0.8175, -1.1676, -0.6896])
 
 *** OneCycleLR(max_lr=math.exp(-3), total_steps=MAX_EPOCHS, pct_start=0.3, anneal_strategy='cos', cycle_momentum=True, base_momentum=0.85, max_momentum=0.95, div_factor=math.exp(1), final_div_factor=math.exp(1))
 {'model_chooser': 17.5, 'big_money_provinces_only': 32.5}
+
+* Learnable Constant only
+** 1600 iterations
+{'model_chooser': 25.0, 'big_money_provinces_only': 25.0}
+
+
+* 1 feature: num provinces minus 4, 1 linear layer, init bias to zero
+** 1600 iterations
+{'model_chooser': 41.5, 'big_money_provinces_only': 8.5}
+tensor([[ 0.0543],
+        [ 0.6768],
+        [ 1.2470],
+        [-0.9463],
+        [-0.9174],
+        [-0.0095],
+        [-0.3346],
+        [-0.3112]])
+tensor([-2.2127,  0.0747,  1.4412, -0.8686,  2.0974,  7.1559, -3.1154, -2.1270])
+{'model_chooser': 42.0, 'big_money_provinces_only': 8.0}
+
+
+** 3200 iterations
+{'model_chooser': 39.5, 'big_money_provinces_only': 10.5}
+ 
+** 6400 iterations
+{'model_chooser': 44.5, 'big_money_provinces_only': 5.5}
+tensor([[-0.2604],
+        [ 0.5240],
+        [ 2.1226],
+        [-1.9065],
+        [-1.7552],
+        [-0.0930],
+        [-1.1947],
+        [ 0.2288]])
+tensor([-4.9270,  0.3586,  1.7766, -1.6030,  4.0322, 13.8826, -5.7529, -3.6432])
+
+** 1600 iterations
+RunningStatisticsNorm1d mean only
+{'model_chooser': 39.0, 'big_money_provinces_only': 11.0} momentum: 0.01
+{'model_chooser': 40.0, 'big_money_provinces_only': 10.0} momentum: 0.001
+{'model_chooser': 44.0, 'big_money_provinces_only': 6.0}  momentum: 0.0001
+
+* 1 feature: num provinces minus 0, 1 linear layer, init bias to zero
+** 1600 iterations without normalization
+{'model_chooser': 40.5, 'big_money_provinces_only': 9.5}
+** 1600 iterations with RunningStatisticsNorm1d mean only, momentum=0.0001
+{'model_chooser': 45.0, 'big_money_provinces_only': 5.0}
+tensor([[ 0.1801],
+        [ 0.6483],
+        [ 1.4976],
+        [-0.9318],
+        [-1.2655],
+        [-0.3527],
+        [ 0.1159],
+        [ 0.1595]])
+tensor([-1.6654,  0.9505,  1.6536, -1.9874,  0.5069,  7.0223, -3.7058, -1.8533])
+
+{'model_chooser': 39.0, 'big_money_provinces_only': 11.0}
+
+
+* 4 features: num provinces minus 0, player_vp_lead, one_province_remaining, two_provinces_reamining, 1 linear layer, init bias to zero
+** 1600 iterations with RunningStatisticsNorm1d mean only, momentum=0.0001, weight decay exp(-5)
+{'model_chooser': 0.0, 'big_money_provinces_only': 50.0}
+
+** 1600 iterations with RunningStatisticsNorm1d mean only, momentum=0.0001, weight decay 0
+{'model_chooser': 6.0, 'big_money_provinces_only': 44.0}  # didn't seem to buy gold
+{'model_chooser': 25.5, 'big_money_provinces_only': 24.5}
+** 3200 iterations with RunningStatisticsNorm1d mean only, momentum=0.0001, weight decay 0
+{'model_chooser': 18.5, 'big_money_provinces_only': 31.5}
+
+
+
+
+
+
+
+* 1 feature: max turns per play minus 10, 1 linear layer, init bias randomly (PyTorch default)
+** 1600 iterations
+{'model_chooser': 34.5, 'big_money_provinces_only': 15.5}
+** 3200 iterations
+{'model_chooser': 43.0, 'big_money_provinces_only': 7.0}
+tensor([[ 0.0920],
+        [-1.1036],
+        [-1.4966],
+        [ 0.6794],
+        [ 1.7774],
+        [ 1.6055],
+        [-0.4822],
+        [-0.6847]])
+tensor([-2.2165,  1.0692,  3.2071, -2.7148, -0.4532,  7.6236, -4.5398, -2.6700])
+
+** 6400 iterations
+{'model_chooser': 39.5, 'big_money_provinces_only': 10.5}
+tensor([[ 0.4971],
+        [-0.9450],
+        [-5.4796],
+        [ 1.2017],
+        [ 2.2536],
+        [ 4.3102],
+        [ 0.1191],
+        [-0.4202]])
+tensor([-2.5928,  3.8580,  4.8222, -2.0722,  2.2610,  7.2872, -7.2139, -0.6373])
+
+** 12800 iterations
+{'model_chooser': 39.5, 'big_money_provinces_only': 10.5}
+tensor([[-0.1849],
+        [-2.3817],
+        [-5.9250],
+        [ 1.9584],
+        [ 2.2022],
+        [ 2.2911],
+        [ 0.2319],
+        [ 1.2373]])
+tensor([ -1.5156,  -1.4983,   4.4276,   4.7687,   9.1618,  16.1847, -10.1894,
+         -2.9236])
+
+
+
+
+* 2 hidden layers
+baseline=0.5
+def get_policy_model():
+    num_input_features = 7
+    hidden_layer_width = 8
+    num_model_outputs = NUM_ACTIONS
+    return torch.nn.Sequential(
+        # torch.nn.BatchNorm1d(num_input_features, affine=False),
+        torch.nn.Linear(num_input_features, hidden_layer_width),
+        torch.nn.ReLU(),
+        torch.nn.Linear(hidden_layer_width, hidden_layer_width),
+        torch.nn.ReLU(),
+        # torch.nn.BatchNorm1d(hidden_layer_width, affine=True),
+
+        torch.nn.Linear(hidden_layer_width, num_model_outputs, bias=True)
+    )
+
+
+** 3200 games
+{'model_chooser': 38.5, 'big_money_provinces_only': 11.5}
+** 6400 games
+{'model_chooser': 22.5, 'big_money_provinces_only': 27.5}
+** 12800 games
+{'model_chooser': 19.5, 'big_money_provinces_only': 30.5}
 
 
 

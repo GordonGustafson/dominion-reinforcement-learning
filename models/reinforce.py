@@ -17,10 +17,12 @@ from torch.utils.data import IterableDataset
 
 import pandas as pd
 import featurizer
+from pytorch.bias_only import LearnableConstant
 
 from pytorch.dataloader import tensorify_inputs
+from pytorch.running_statistics_norm import RunningStatisticsNorm1d
 
-MAX_EPOCHS=800
+MAX_EPOCHS=1600
 
 
 class DatasetFromCallable(IterableDataset):
@@ -47,15 +49,15 @@ class PolicyGradientModel(L.LightningModule):
             player_names=["model_1", "model_2"],
             choosers=choosers,
             n=1)
-        list_of_game_dfs = [featurizer.game_history_to_df(chooser._state_action_pairs,
-                                                          chooser._game_outcome,
+        list_of_game_dfs = [featurizer.game_history_to_df(chooser.state_action_pairs,
+                                                          chooser.game_outcome,
                                                           player_index)
                             for player_index, chooser in enumerate(choosers)]
         game_df = pd.concat(list_of_game_dfs, axis="index", ignore_index=True)
         state_features = tensorify_inputs(game_df)
         selected_action_probabilities = concat_zero_dimensional_tensors(choosers[0].action_probability_tensors + choosers[1].action_probability_tensors)
-        rewards = torch.tensor([game_outcome_to_reward(choosers[0]._game_outcome)] * len(choosers[0].action_probability_tensors)
-                               + [game_outcome_to_reward(choosers[1]._game_outcome)] * len(choosers[1].action_probability_tensors))
+        rewards = torch.tensor([game_outcome_to_reward(choosers[0].game_outcome)] * len(choosers[0].action_probability_tensors)
+                               + [game_outcome_to_reward(choosers[1].game_outcome)] * len(choosers[1].action_probability_tensors))
         return state_features, selected_action_probabilities, rewards
 
 
@@ -69,9 +71,9 @@ class PolicyGradientModel(L.LightningModule):
         state_features, selected_action_probabilities, rewards = batch  # shape: (N, D), (N, 1)
         # A batch size dimension of 1 gets preprended to each tensor by the train_dataloader since it thinks
         # generate_batch returns a single training input. We remove that dimension here.
-        state_features = state_features.squeeze()
-        selected_action_probabilities = selected_action_probabilities.squeeze()
-        rewards = rewards.squeeze()
+        state_features = state_features.flatten(0, 1)
+        selected_action_probabilities = selected_action_probabilities.flatten(0, 1)
+        rewards = rewards.flatten(0, 1)
         if self.state_value_model is not None:
             baseline_rewards = self.state_value_model.forward(state_features)
         else:
@@ -84,8 +86,8 @@ class PolicyGradientModel(L.LightningModule):
         state_features, _, rewards = batch  # shape: (N, D), (N, 1)
         # A batch size dimension of 1 gets preprended to each tensor by the train_dataloader since it thinks
         # generate_batch returns a single training input. We remove that dimension here.
-        state_features = state_features.squeeze()
-        rewards = rewards.squeeze()
+        state_features = state_features.flatten(0, 1)
+        rewards = rewards.flatten(0, 1)
 
         state_value_scores = self.state_value_model.forward(state_features).squeeze()
         state_value_predictions = torch.nn.functional.sigmoid(state_value_scores)
@@ -144,35 +146,46 @@ class PolicyGradientModel(L.LightningModule):
         return [policy_model_optimizer, state_value_model_optimizer]
 
 def get_policy_model():
-    num_input_features = 7
-    hidden_layer_width = 8
+    num_input_features = 1
     num_model_outputs = NUM_ACTIONS
+    linear_layer = torch.nn.Linear(num_input_features, num_model_outputs, bias=True)
+    torch.nn.init.xavier_uniform_(linear_layer.weight, gain=1.0)
+    torch.nn.init.zeros_(linear_layer.bias)
     return torch.nn.Sequential(
-        # torch.nn.BatchNorm1d(num_input_features, affine=False),
-        torch.nn.Linear(num_input_features, hidden_layer_width),
-        torch.nn.ReLU(),
-        # torch.nn.BatchNorm1d(hidden_layer_width, affine=True),
-
-        torch.nn.Linear(hidden_layer_width, num_model_outputs, bias=True)
+        RunningStatisticsNorm1d(num_input_features, momentum=0.0001, affine=False),
+        linear_layer
     )
+
+    # hidden_layer_width = 8
+    # return torch.nn.Sequential(
+    #     # torch.nn.BatchNorm1d(num_input_features, affine=False),
+    #     # torch.nn.Linear(num_input_features, hidden_layer_width, bias=True),
+    #     # torch.nn.ReLU(),
+    #     # torch.nn.Linear(hidden_layer_width, hidden_layer_width, bias=True),
+    #     # torch.nn.ReLU(),
+    #     # torch.nn.BatchNorm1d(hidden_layer_width, affine=True),
+
+    #     # torch.nn.Linear(hidden_layer_width, num_model_outputs, bias=True)
+    # )
 
 
 
 def get_state_value_model():
-    num_input_features = 7
-    hidden_layer_width = 4
-    num_model_outputs = 1
-    model = torch.nn.Sequential(
-        torch.nn.BatchNorm1d(num_input_features, affine=False),
+    return None
+    # num_input_features = 7
+    # hidden_layer_width = 4
+    # num_model_outputs = 1
+    # model = torch.nn.Sequential(
+    #     torch.nn.BatchNorm1d(num_input_features, affine=False),
 
-        torch.nn.Linear(num_input_features, hidden_layer_width),
-        torch.nn.ReLU(),
-        torch.nn.BatchNorm1d(hidden_layer_width, affine=True),
+    #     torch.nn.Linear(num_input_features, hidden_layer_width),
+    #     torch.nn.ReLU(),
+    #     torch.nn.BatchNorm1d(hidden_layer_width, affine=True),
 
-        torch.nn.Linear(hidden_layer_width, num_model_outputs, bias=True)
-    )
+    #     torch.nn.Linear(hidden_layer_width, num_model_outputs, bias=True)
+    # )
 
-    return model
+    # return model
 
 def train_reinforce_model():
     policy_model = get_policy_model()
@@ -197,6 +210,6 @@ def train_reinforce_model():
             player_names=["model_chooser", "big_money_provinces_only"],
             choosers=choosers,
             n=1)
-        for state_action_pair in choosers[0]._state_action_pairs:
+        for state_action_pair in choosers[0].state_action_pairs:
             selected_choice = state_action_pair.possible_actions[state_action_pair.selected_action]
             print(selected_choice.action.get_description())
