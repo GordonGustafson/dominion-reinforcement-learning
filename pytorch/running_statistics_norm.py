@@ -23,22 +23,17 @@ class RunningStatisticsNorm1d(nn.BatchNorm1d):
         # calculate running estimates
         if self.training:
             mean = input.mean([0])
-            # use biased var in train
-            var = input.var([0], unbiased=False)
-            n = input.numel() / input.size(1)
+            var = torch.square(input - self.running_mean).mean([0])
             with torch.no_grad():
                 self.running_mean = (exponential_average_factor * mean
                     + (1 - exponential_average_factor) * self.running_mean)
-                # update running_var with unbiased var
-                self.running_var = (exponential_average_factor * var * n / (n - 1)
+                self.running_var = (exponential_average_factor * var
                     + (1 - exponential_average_factor) * self.running_var)
 
-        # input = (input - self.running_mean[None, :]) / (torch.sqrt(self.running_var[None, :] + self.eps))
-        input = input - self.running_mean[None, :]
+      # input = (input - self.running_mean[None, :]) / (torch.sqrt(self.running_var[None, :] + self.eps))
+        input = (input - self.running_mean[None, :]) / torch.sqrt(self.running_var[None, :] + self.eps)
         if self.affine:
             input = input * self.weight[None, :] + self.bias[None, :]
-
-        print(f"running_mean: {self.running_mean}")
 
         return input
 
@@ -51,4 +46,4 @@ class RunningStatisticsNorm1d(nn.BatchNorm1d):
 #         return nn.functional.batch_norm(
 #             x, self.running_mean, self.running_var, self.weight, self.bias,
 #             training=False, eps=self.eps
-#         )
+#action_reward         )
