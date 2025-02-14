@@ -1,6 +1,6 @@
 from collections.abc import Callable
 
-from actions import action_to_action_id, action_id_to_action, NUM_ACTIONS
+from actions import action_to_action_id, GainNothing, GainCard, PlayActionCard, PlayNoActionCard
 from chooser import Chooser
 from game import Choice
 from pytorch.dataloader import tensorify_inputs
@@ -9,6 +9,7 @@ import torch
 import featurizer
 from cards import *
 
+ChooserFunction = Callable[[Chooser, GameState, List[Choice], int], int]
 
 def random_strategy(chooser: Chooser, game_state: GameState, choices: List[Choice], player_index: int) -> int:
     return random.randrange(len(choices))
@@ -37,21 +38,21 @@ def user_chooser(chooser: Chooser, game_state: GameState, choices: List[Choice],
 
     return int(selected_choice)
 
-def scikit_learn_max_state_score_strategy(scikit_learn_model) -> Callable[[Chooser, GameState, List[Choice], int], int]:
+def scikit_learn_max_state_score_strategy(scikit_learn_model) -> ChooserFunction:
     def choose_with_model(chooser: Chooser, game_state: GameState, choices: List[Choice], player_index: int) -> int:
         state_values = [scikit_learn_model.predict(featurizer.game_state_to_df(c.game_state, player_index)) for c in choices]
         return state_values.index(max(state_values))
 
     return choose_with_model
 
-def pytorch_max_state_score_strategy(pytorch_model) -> Callable[[Chooser, GameState, List[Choice], int], int]:
+def pytorch_max_state_score_strategy(pytorch_model) -> ChooserFunction:
     def choose_with_model(chooser: Chooser, game_state: GameState, choices: List[Choice], player_index: int) -> int:
         state_values = [pytorch_model.forward(tensorify_inputs(featurizer.game_state_to_df(c.game_state, player_index))) for c in choices]
         return state_values.index(max(state_values))
 
     return choose_with_model
 
-def pytorch_max_action_score_strategy(pytorch_model) -> Callable[[Chooser, GameState, List[Choice], int], int]:
+def pytorch_max_action_score_strategy(pytorch_model) -> ChooserFunction:
     def choose_with_model(chooser: Chooser, game_state: GameState, choices: List[Choice], player_index: int) -> int:
         action_scores = pytorch_model.forward(
             tensorify_inputs(featurizer.game_state_to_df(game_state, player_index)))
@@ -62,7 +63,7 @@ def pytorch_max_action_score_strategy(pytorch_model) -> Callable[[Chooser, GameS
 
     return choose_with_model
 
-def pytorch_sampled_action_strategy(pytorch_model) -> Callable[[Chooser, GameState, List[Choice], int], int]:
+def pytorch_sampled_action_strategy(pytorch_model) -> ChooserFunction:
     def sample_from_model(chooser: Chooser, game_state: GameState, choices: List[Choice], player_index: int) -> int:
         action_scores = pytorch_model.forward(
             tensorify_inputs(featurizer.game_state_to_df(game_state, player_index)))
@@ -73,11 +74,12 @@ def pytorch_sampled_action_strategy(pytorch_model) -> Callable[[Chooser, GameSta
         distribution = torch.distributions.Categorical(probs=action_probabilities)
         selected_choice_index = distribution.sample().item()
         chooser.action_probability_tensors.append(action_probabilities[selected_choice_index])
+        chooser.valid_action_distribution_entropies.append(distribution.entropy())
         return selected_choice_index
 
     return sample_from_model
 
-def wrap_with_epsilon_greedy(chooser_function: Callable[[Chooser, GameState, List[Choice], int], int], epsilon: float) -> Callable[[Chooser, GameState, List[Choice], int], int]:
+def wrap_with_epsilon_greedy(chooser_function: ChooserFunction, epsilon: float) -> ChooserFunction:
     def choose_with_epsilon_greedy(chooser: Chooser, game_state: GameState, choices: List[Choice], player_index: int) -> int:
         num_choices = len(choices)
         greedy_choice = chooser_function(chooser, game_state, choices, player_index)
@@ -88,6 +90,36 @@ def wrap_with_epsilon_greedy(chooser_function: Callable[[Chooser, GameState, Lis
 
     return choose_with_epsilon_greedy
 
+################################################################################
+# Playing Strategies                                                           #
+################################################################################
+
+def combination_of_gaining_strategy_and_playing_strategy(gaining_strategy: ChooserFunction, playing_strategy: ChooserFunction) -> ChooserFunction:
+    def choose_with_appropriate_strategy(chooser: Chooser, game_state: GameState, choices: List[Choice], player_index: int) -> int:
+        possible_actions = [choice.action for choice in choices]
+        if all(type(action) in {GainCard, GainNothing} for action in possible_actions):
+            return gaining_strategy(chooser, game_state, choices, player_index)
+        return playing_strategy(chooser, game_state, choices, player_index)
+
+    return choose_with_appropriate_strategy
+
+def play_plus_actions_first(chooser: Chooser, game_state: GameState, choices: List[Choice], player_index: int):
+    possible_actions = [choice.action for choice in choices]
+    action_to_score = {
+        PlayNoActionCard(): -1,
+        PlayActionCard(card_name_to_card("smithy")): 0,
+        PlayActionCard(card_name_to_card("market")): 1,
+        PlayActionCard(card_name_to_card("laboratory")): 1,
+        PlayActionCard(card_name_to_card("festival")): 2,
+        PlayActionCard(card_name_to_card("village")): 2,
+    }
+    possible_action_scores = [action_to_score[action] for action in possible_actions]
+    return possible_action_scores.index(max(possible_action_scores))
+
+
+################################################################################
+# Baseline Strategies                                                         # 
+################################################################################
 
 def big_money_until_province_then_all_victory(chooser: Chooser, game_state: GameState, choices: List[Choice], player_index: int) -> int:
     current_vp = get_total_player_vp(game_state.current_player())

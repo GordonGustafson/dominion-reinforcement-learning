@@ -1,5 +1,6 @@
 from typing import Any
 
+from actions import Action
 from cards import *
 
 import numpy as np
@@ -20,17 +21,23 @@ def game_outcome_to_reward(game_outcome: GameOutcome) -> float:
 
 def game_history_to_df(state_action_pairs: List[StateActionPair],
                        game_outcome_for_player: GameOutcome,
-                       player_index: int):
+                       player_index: int,
+                       action_to_reward: dict[Action, float] | None = None):
+    if action_to_reward is None:
+        action_to_reward = {}
     selected_game_states = (sap.possible_actions[sap.selected_action].game_state
                             for sap in state_action_pairs)
     game_state_dicts = [game_state_to_dict(gs, player_index=player_index)
                         for gs in selected_game_states]
 
 
-    reward = game_outcome_to_reward(game_outcome_for_player)
-    for d in game_state_dicts:
+    game_outcome_reward = game_outcome_to_reward(game_outcome_for_player)
+    cumulative_action_reward = 0.0
+    for sap, d in reversed(list(zip(state_action_pairs, game_state_dicts))):
+        selected_action = sap.possible_actions[sap.selected_action].action
+        cumulative_action_reward += action_to_reward.get(selected_action, 0.0)
         # Using gamma=1 for now.
-        d["reward"] = reward
+        d["reward"] = game_outcome_reward + cumulative_action_reward
 
     return pd.DataFrame(game_state_dicts, dtype=np.float32)
 
@@ -58,4 +65,15 @@ def game_state_to_df(game_state: GameState, player_index: int) -> pd.DataFrame:
     return pd.DataFrame([game_state_to_dict(game_state, player_index)], dtype=np.float32)
 
 def player_to_dict(player: Player, suffix: str) -> dict:
-    return {"average_treasure_value" + suffix: get_average_treasure_value_per_card(player)}
+    all_player_cards = get_all_player_cards(player)
+    return {
+        "average_treasure_value" + suffix: get_average_treasure_value_per_card(player),
+        "num_copper_owned" + suffix: all_player_cards[card_name_to_card("copper")],
+        "num_silver_owned" + suffix: all_player_cards[card_name_to_card("silver")],
+        "num_gold_owned" + suffix: all_player_cards[card_name_to_card("gold")],
+        "num_smithy_owned" + suffix: all_player_cards[card_name_to_card("smithy")],
+        "num_laboratory_owned" + suffix: all_player_cards[card_name_to_card("laboratory")],
+        "num_village_owned" + suffix: all_player_cards[card_name_to_card("village")],
+        "num_festival_owned" + suffix: all_player_cards[card_name_to_card("festival")],
+        "num_market_owned" + suffix: all_player_cards[card_name_to_card("market")],
+    }

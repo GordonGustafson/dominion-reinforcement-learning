@@ -1,7 +1,9 @@
 from typing import Iterator, Callable
 import math
 
-from actions import NUM_ACTIONS
+import actions
+from actions import NUM_ACTIONS, GainCard
+from cards import card_name_to_card, CARD_LIST
 from chooser import Chooser
 from featurizer import game_outcome_to_reward
 
@@ -17,12 +19,16 @@ from torch.utils.data import IterableDataset
 
 import pandas as pd
 import featurizer
-from pytorch.bias_only import LearnableConstant
 
-from pytorch.dataloader import tensorify_inputs
+from pytorch.dataloader import tensorify_inputs, NUM_INPUT_FEATURES
 from pytorch.running_statistics_norm import RunningStatisticsNorm1d
+from pytorch.sum_modules import SumModules
 
 MAX_EPOCHS=1600
+VP_REWARD_MULTIPLIER = 0.00
+ACTION_TO_REWARD = {GainCard(card): VP_REWARD_MULTIPLIER
+                                    * (card.vp_effects[0].value if len(card.vp_effects) > 0 else 0)
+                    for card in CARD_LIST}
 
 
 class DatasetFromCallable(IterableDataset):
@@ -37,28 +43,38 @@ def concat_zero_dimensional_tensors(zero_dimensional_tensors: list[torch.Tensor]
     return torch.cat(one_dimensional_tensors)
 
 class PolicyGradientModel(L.LightningModule):
-    def __init__(self, policy_model: torch.nn.Module, state_value_model: torch.nn.Module | None):
+    def __init__(self, policy_model: torch.nn.Module, state_value_model: torch.nn.Module | None, entropy_loss_weight: float):
         super().__init__()
         self.policy_model = policy_model
         self.state_value_model = state_value_model
+        self.entropy_loss_weight = entropy_loss_weight
         self.automatic_optimization = False
 
     def generate_batch(self):
-        choosers = [Chooser(f) for f in [strategies.pytorch_sampled_action_strategy(self.policy_model)] * 2]
+        chooser_function = strategies.combination_of_gaining_strategy_and_playing_strategy(
+            gaining_strategy=strategies.wrap_with_epsilon_greedy(strategies.pytorch_sampled_action_strategy(self.policy_model),
+                                                                 epsilon=0.4),
+            playing_strategy=strategies.play_plus_actions_first)
+        choosers = [Chooser(f) for f in [chooser_function] * 2]
         _, _ = play.play_n_games(
             player_names=["model_1", "model_2"],
             choosers=choosers,
-            n=1)
+            n=1,
+            action_to_reward=ACTION_TO_REWARD)
         list_of_game_dfs = [featurizer.game_history_to_df(chooser.state_action_pairs,
                                                           chooser.game_outcome,
-                                                          player_index)
+                                                          player_index,
+                                                          action_to_reward=ACTION_TO_REWARD)
                             for player_index, chooser in enumerate(choosers)]
         game_df = pd.concat(list_of_game_dfs, axis="index", ignore_index=True)
         state_features = tensorify_inputs(game_df)
-        selected_action_probabilities = concat_zero_dimensional_tensors(choosers[0].action_probability_tensors + choosers[1].action_probability_tensors)
+        selected_action_probabilities = concat_zero_dimensional_tensors(choosers[0].action_probability_tensors +
+                                                                        choosers[1].action_probability_tensors)
+        valid_action_distribution_entropies = concat_zero_dimensional_tensors(choosers[0].valid_action_distribution_entropies +
+                                                                              choosers[1].valid_action_distribution_entropies)
         rewards = torch.tensor([game_outcome_to_reward(choosers[0].game_outcome)] * len(choosers[0].action_probability_tensors)
                                + [game_outcome_to_reward(choosers[1].game_outcome)] * len(choosers[1].action_probability_tensors))
-        return state_features, selected_action_probabilities, rewards
+        return state_features, selected_action_probabilities, valid_action_distribution_entropies, rewards
 
 
     def train_dataloader(self):
@@ -68,7 +84,7 @@ class PolicyGradientModel(L.LightningModule):
         return DataLoader(dataset=dataset, batch_size=1)
 
     def policy_model_loss(self, batch):
-        state_features, selected_action_probabilities, rewards = batch  # shape: (N, D), (N, 1)
+        state_features, selected_action_probabilities, valid_action_distribution_entropies, rewards = batch  # shape: (N, D), (N, 1)
         # A batch size dimension of 1 gets preprended to each tensor by the train_dataloader since it thinks
         # generate_batch returns a single training input. We remove that dimension here.
         state_features = state_features.flatten(0, 1)
@@ -79,8 +95,13 @@ class PolicyGradientModel(L.LightningModule):
         else:
             baseline_rewards = 0.5
 
-        train_loss_items = - torch.log(selected_action_probabilities) * (rewards - baseline_rewards)
-        return train_loss_items.sum()
+        log_selected_action_probabilities = torch.log(selected_action_probabilities)
+        train_loss_items = - log_selected_action_probabilities * (rewards - baseline_rewards)
+        total_train_loss = train_loss_items.sum()
+        total_entropy_loss = - self.entropy_loss_weight * valid_action_distribution_entropies.sum()
+        print(f"total_train_loss: {total_train_loss}")
+        print(f"weighted total_entropy_loss: {total_entropy_loss}")
+        return total_train_loss + total_entropy_loss
 
     def state_value_model_loss(self, batch):
         state_features, _, rewards = batch  # shape: (N, D), (N, 1)
@@ -143,42 +164,42 @@ class PolicyGradientModel(L.LightningModule):
         #                                                    max_momentum=0.95,
         #                                                    div_factor=math.exp(1),
         #                                                    final_div_factor=math.exp(1))
-        return [policy_model_optimizer, state_value_model_optimizer]
+        # return [policy_model_optimizer, state_value_model_optimizer]
 
 def get_policy_model():
-    num_input_features = 1
+    hidden_layer_width = 8
     num_model_outputs = NUM_ACTIONS
-    linear_layer = torch.nn.Linear(num_input_features, num_model_outputs, bias=True)
-    torch.nn.init.xavier_uniform_(linear_layer.weight, gain=1.0)
-    torch.nn.init.zeros_(linear_layer.bias)
-    return torch.nn.Sequential(
-        RunningStatisticsNorm1d(num_input_features, momentum=0.0001, affine=False),
-        linear_layer
-    )
+    final_linear_layer = torch.nn.Linear(NUM_INPUT_FEATURES, num_model_outputs, bias=True)
+    torch.nn.init.xavier_uniform_(final_linear_layer.weight, gain=1.0)
+    torch.nn.init.zeros_(final_linear_layer.bias)
 
-    # hidden_layer_width = 8
     # return torch.nn.Sequential(
-    #     # torch.nn.BatchNorm1d(num_input_features, affine=False),
-    #     # torch.nn.Linear(num_input_features, hidden_layer_width, bias=True),
-    #     # torch.nn.ReLU(),
-    #     # torch.nn.Linear(hidden_layer_width, hidden_layer_width, bias=True),
-    #     # torch.nn.ReLU(),
-    #     # torch.nn.BatchNorm1d(hidden_layer_width, affine=True),
-
-    #     # torch.nn.Linear(hidden_layer_width, num_model_outputs, bias=True)
+    #     RunningStatisticsNorm1d(NUM_INPUT_FEATURES, momentum=0.0001, affine=False),
+    #     final_linear_layer,
     # )
+    return torch.nn.Sequential(
+        RunningStatisticsNorm1d(NUM_INPUT_FEATURES, momentum=0.0001, affine=False),
+        SumModules([
+            final_linear_layer,
+            torch.nn.Sequential(
+                torch.nn.Linear(NUM_INPUT_FEATURES, hidden_layer_width, bias=True),
+                torch.nn.ReLU(),
+                torch.nn.Linear(hidden_layer_width, num_model_outputs, bias=False),
+            ),
+        ])
+    )
 
 
 
 def get_state_value_model():
     return None
-    # num_input_features = 7
+    # NUM_INPUT_FEATURES = 7
     # hidden_layer_width = 4
     # num_model_outputs = 1
     # model = torch.nn.Sequential(
-    #     torch.nn.BatchNorm1d(num_input_features, affine=False),
+    #     torch.nn.BatchNorm1d(NUM_INPUT_FEATURES, affine=False),
 
-    #     torch.nn.Linear(num_input_features, hidden_layer_width),
+    #     torch.nn.Linear(NUM_INPUT_FEATURES, hidden_layer_width),
     #     torch.nn.ReLU(),
     #     torch.nn.BatchNorm1d(hidden_layer_width, affine=True),
 
@@ -190,26 +211,37 @@ def get_state_value_model():
 def train_reinforce_model():
     policy_model = get_policy_model()
     state_value_model = get_state_value_model()
-    wrapped_model = PolicyGradientModel(policy_model=policy_model, state_value_model=state_value_model)
+    wrapped_model = PolicyGradientModel(policy_model=policy_model,
+                                        state_value_model=state_value_model,
+                                        entropy_loss_weight=0)
     trainer = L.Trainer(max_epochs=MAX_EPOCHS)
     trainer.fit(model=wrapped_model)
 
     policy_model.eval()
-    games_df, win_rates = play.play_n_games(
+    _, win_rates = play.play_n_games(
         player_names=["model_chooser", "big_money_provinces_only"],
-        choosers=[Chooser(strategies.pytorch_max_action_score_strategy(policy_model)),
-                  Chooser(strategies.big_money_provinces_only)],
-        n=50)
-    print(win_rates)
+        choosers=[
+            Chooser(strategies.combination_of_gaining_strategy_and_playing_strategy(
+                gaining_strategy=strategies.pytorch_max_action_score_strategy(policy_model),
+                playing_strategy=strategies.play_plus_actions_first)),
+            Chooser(strategies.big_money_provinces_only)],
+        n=50,
+        action_to_reward=ACTION_TO_REWARD)
 
     print("Actions taken by policy_model in sample games:")
     for i in range(10):
-        choosers = [Chooser(strategies.pytorch_max_action_score_strategy(policy_model)),
-                    Chooser(strategies.big_money_provinces_only)]
+        choosers=[
+            Chooser(strategies.combination_of_gaining_strategy_and_playing_strategy(
+                gaining_strategy=strategies.pytorch_max_action_score_strategy(policy_model),
+                playing_strategy=strategies.play_plus_actions_first)),
+            Chooser(strategies.big_money_provinces_only)]
         game_df, _ = play.play_n_games(
             player_names=["model_chooser", "big_money_provinces_only"],
             choosers=choosers,
-            n=1)
+            n=1,
+            action_to_reward=ACTION_TO_REWARD)
         for state_action_pair in choosers[0].state_action_pairs:
             selected_choice = state_action_pair.possible_actions[state_action_pair.selected_action]
             print(selected_choice.action.get_description())
+
+    print(win_rates)

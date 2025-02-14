@@ -3,6 +3,8 @@ from torch.utils.data import Dataset
 
 import torch
 
+NUM_INPUT_FEATURES = 10
+
 class DominionDataset(Dataset):
     def __init__(self, dataframe: pd.DataFrame) -> None:
         self.feature_dataframe = dataframe.drop(columns=["reward"])
@@ -21,14 +23,18 @@ def tensorify_inputs(df: pd.DataFrame) -> torch.tensor:
     # Index the DF to make sure the columns show up in the right order? I'm not sure how this is typically done.
     # TODO: Why is the shape 1-dimensional here until I manually reshape it?
     return torch.tensor(df[[
-        # "player_vp_lead",
+        "player_vp_lead",
         "num_provinces_remaining",
-        #"average_treasure_value_self",
+        "average_treasure_value_self",
+        "num_copper_owned_self",
+        "num_silver_owned_self",
+        "num_gold_owned_self",
+        "num_smithy_owned_self",
         #"average_treasure_value_opponent",
-        #"max_turns_per_player",
-        # "two_provinces_remaining",
-        # "one_province_remaining",
-                        ]].to_numpy().reshape((-1, 1)))
+        "max_turns_per_player",
+        "two_provinces_remaining",
+        "one_province_remaining",
+                        ]].to_numpy().reshape((-1, NUM_INPUT_FEATURES)))
 
 def tensorify_reward(df: pd.DataFrame) -> torch.tensor:
     return torch.tensor(df[["reward"]].to_numpy().squeeze())

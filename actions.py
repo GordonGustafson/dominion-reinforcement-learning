@@ -150,10 +150,9 @@ class PlayAllTreasures:
         return f"play all treasures"
 
 # We're modeling gaining and buying cards as the same action for now for better generalization.
-_ACTION_TYPES_WITH_CARD_PARAMETER = [
+_ACTION_TYPES_WITH_ANY_CARD_PARAMETER = [
     GainCard,
 #    GainCardToHand,
-#    PlayActionCard,
 #    DiscardCard,
 #    DiscardCardToDrawACard,
 #    DontDiscardCardToDrawACard,
@@ -161,12 +160,19 @@ _ACTION_TYPES_WITH_CARD_PARAMETER = [
 #    TrashCardFromHand,
 #    TrashRevealedCard,
 #    TrashCardFromHandToGainCardCostingUpTo2More,
+]
+
+_ACTION_TYPES_WITH_ACTION_CARD_PARAMETER = [
+    PlayActionCard,
+]
+
+_ACTION_TYPES_WITH_TREASURE_CARD_PARAMETER = [
 #    TrashTreasureCardFromHandToGainTreasureCardToHandCostingUpTo3More,
 ]
 
 _ACTION_TYPES_WITHOUT_CARD_PARAMETER = [
     GainNothing,
-#    PlayNoActionCard,
+    PlayNoActionCard,
 #    PutNoCardFromDiscardPileOntoDeck,
 #    TrashNoCardFromHand,
 #    TrashNoTreasureCardFromHandToGainTreasureCardToHandCostingUpTo3More,
@@ -175,13 +181,24 @@ _ACTION_TYPES_WITHOUT_CARD_PARAMETER = [
 #    PlayAllTreasures,
 ]
 
-Action = typing.Union[*(_ACTION_TYPES_WITH_CARD_PARAMETER + _ACTION_TYPES_WITHOUT_CARD_PARAMETER)]
+Action = typing.Union[*(_ACTION_TYPES_WITH_ANY_CARD_PARAMETER
+                        + _ACTION_TYPES_WITH_ACTION_CARD_PARAMETER
+                        + _ACTION_TYPES_WITH_TREASURE_CARD_PARAMETER
+                        + _ACTION_TYPES_WITHOUT_CARD_PARAMETER)]
 
 _ACTIONS_LIST = ([action_type(card)
-                 for action_type in _ACTION_TYPES_WITH_CARD_PARAMETER
-                 for card in CARD_LIST] +
+                  for action_type in _ACTION_TYPES_WITH_ANY_CARD_PARAMETER
+                  for card in CARD_LIST] +
+                 [action_type(card)
+                  for action_type in _ACTION_TYPES_WITH_ACTION_CARD_PARAMETER
+                  for card in CARD_LIST if len(card.action_effects) > 0] +
+                 [action_type(card)
+                  for action_type in _ACTION_TYPES_WITH_TREASURE_CARD_PARAMETER
+                  for card in CARD_LIST if len(card.treasure_effects) > 0] +
                  [action_type()
                   for action_type in _ACTION_TYPES_WITHOUT_CARD_PARAMETER])
+
+print(_ACTIONS_LIST)
 
 _ACTION_TO_ACTION_ID = {action: action_id for action_id, action in enumerate(_ACTIONS_LIST)}
 

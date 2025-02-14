@@ -135,14 +135,23 @@ CARD_LIST = [
      make_card(name="province", cost=8, vp_effects=(Effect(EffectName.VP, 6),)),
 
      make_card(name="curse", cost=0, vp_effects=(Effect(EffectName.VP, -1),)),
-#
-#    # +cards
-#    make_card(name="smithy", cost=4, action_effects=(Effect(EffectName.DRAW_CARDS, 3),)),
-#
-#    # +actions
-#    make_card(name="laboratory", cost=5, action_effects=(Effect(EffectName.DRAW_CARDS, 2), Effect(EffectName.PLUS_ACTIONS, 1))),
-#    make_card(name="village", cost=3, action_effects=(Effect(EffectName.DRAW_CARDS, 1), Effect(EffectName.PLUS_ACTIONS, 2))),
-#
+
+     # +cards
+     make_card(name="smithy", cost=4, action_effects=(Effect(EffectName.DRAW_CARDS, 3),)),
+ 
+     # +actions
+     make_card(name="laboratory", cost=5, action_effects=(Effect(EffectName.DRAW_CARDS, 2), Effect(EffectName.PLUS_ACTIONS, 1))),
+     make_card(name="village", cost=3, action_effects=(Effect(EffectName.DRAW_CARDS, 1), Effect(EffectName.PLUS_ACTIONS, 2))),
+
+     # +buys
+     make_card(name="festival", cost=5, action_effects=(Effect(EffectName.PLUS_ACTIONS, 2),
+                                                        Effect(EffectName.PLUS_BUYS, 1),
+                                                        Effect(EffectName.PRODUCE_MONEY, 2))),
+     make_card(name="market", cost=5, action_effects=(Effect(EffectName.PLUS_ACTIONS, 1),
+                                                      Effect(EffectName.PLUS_BUYS, 1),
+                                                      Effect(EffectName.PRODUCE_MONEY, 1, ),
+                                                      Effect(EffectName.DRAW_CARDS, 1))),
+ 
 #    # trashing cards
 #    make_card(name="chapel", cost=2, action_effects=(Effect(EffectName.MAY_TRASH_A_CARD_FROM_YOUR_HAND, None),
 #                                                     Effect(EffectName.MAY_TRASH_A_CARD_FROM_YOUR_HAND, None),
@@ -153,15 +162,6 @@ CARD_LIST = [
 #    make_card(name="workshop", cost=3, action_effects=(Effect(EffectName.GAIN_A_CARD_COSTING_UP_TO, 4),)),
 #    make_card(name="remodel", cost=4, action_effects=(Effect(EffectName.TRASH_GAIN_A_CARD_COSTING_UP_TO_X_MORE, 2),)),
 #    make_card(name="mine", cost=5, action_effects=(Effect(EffectName.MAY_TRASH_TREASURE_GAIN_TREASURE_TO_HAND_COSTING_UP_TO_X_MORE, 3),)),
-#
-#    # +buys
-#    make_card(name="festival", cost=5, action_effects=(Effect(EffectName.PLUS_ACTIONS, 2),
-#                                                       Effect(EffectName.PLUS_BUYS, 1),
-#                                                       Effect(EffectName.PRODUCE_MONEY, 2))),
-#    make_card(name="market", cost=5, action_effects=(Effect(EffectName.PLUS_ACTIONS, 1),
-#                                                     Effect(EffectName.PLUS_BUYS, 1),
-#                                                     Effect(EffectName.PRODUCE_MONEY, 1, ),
-#                                                     Effect(EffectName.DRAW_CARDS, 1))),
 #
 #    # simple draw/discard effects
 #    make_card(name="cellar", cost=2, action_effects=(Effect(EffectName.PLUS_ACTIONS, 1),
@@ -501,15 +501,15 @@ def initial_supply_base_cards(num_players: int) -> Dict[str, int]:
 
 def initial_supply(num_players: int) -> Dict[str, int]:
     card_dict = initial_supply_base_cards(num_players)
-    # card_dict["smithy"] = 10
-    # card_dict["village"] = 10
-    # card_dict["laboratory"] = 10
+    card_dict["smithy"] = 10
+    card_dict["village"] = 10
+    card_dict["laboratory"] = 10
+    card_dict["festival"] = 10
+    card_dict["market"] = 10
     # card_dict["chapel"] = 10
     # card_dict["workshop"] = 10
     # card_dict["remodel"] = 10
     # card_dict["mine"] = 10
-    # card_dict["festival"] = 10
-    # card_dict["market"] = 10
     # card_dict["cellar"] = 10
     # card_dict["harbinger"] = 10
     # card_dict["moneylender"] = 10

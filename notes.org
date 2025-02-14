@@ -1,15 +1,147 @@
+* random forest from scratch
+* models
+parametric models - assume a priori the distribution of each parameter
+nonparametric model - no assumption about the distribution of the parameter
+
 * TODO PPO
 * TODO Play 50 games against a baseline strategy every N epochs and plot the result
 * TODO Why do models seem to stop changing?
 ** TODO Plot gradient magnitude over time
 
-* REINFORCE
+* REINFORCE with kingdom cards
+5 features: "player_vp_lead", "num_provinces_remaining", "max_turns_per_player", "two_provinces_remaining", "one_province_remaining",
+6 features: add "average_treasure_value_self"
+
+** 14 features, smithy, village, laboratory, festival, market, 800 games, model chooses only gain actions
+add num copper, silver, gold, and smithy, village, laboratory, festival, market owned
+*** linear model
+***** entropy_loss_weight=0
+{'model_chooser': 43.5, 'big_money_provinces_only': 6.5}
+
+*** linear model + 1 hidden layer with 8 nodes
+***** entropy_loss_weight=0, epsilon=0.4
+{'model_chooser': 31.5, 'big_money_provinces_only': 18.5}
+***** entropy_loss_weight=0, epsilon=0.2
+{'model_chooser': 37.5, 'big_money_provinces_only': 12.5}
+{'model_chooser': 42.5, 'big_money_provinces_only': 7.5}
+***** entropy_loss_weight=0, epsilon=0.1
+{'model_chooser': 42.0, 'big_money_provinces_only': 8.0}
+***** entropy_loss_weight=0, epsilon=0.05
+
+
+***** entropy_loss_weight=0
+{'model_chooser': 45.0, 'big_money_provinces_only': 5.0}
+***** entropy_loss_weight=math.exp(-5)
+{'model_chooser': 21.0, 'big_money_provinces_only': 29.0}
+{'model_chooser': 32.0, 'big_money_provinces_only': 18.0}
+***** entropy_loss_weight=math.exp(-4)
+{'model_chooser': 43.5, 'big_money_provinces_only': 6.5}
+***** entropy_loss_weight=math.exp(-3)
+{'model_chooser': 19.0, 'big_money_provinces_only': 31.0}
+
+
+
+*** linear model + 1 hidden layer with 16 nodes
+***** entropy_loss_weight=0
+{'model_chooser': 40.0, 'big_money_provinces_only': 10.0}
+
+*** linear model + 2 hidden layers with 8 nodes
+***** entropy_loss_weight=0
+{'model_chooser': 37.0, 'big_money_provinces_only': 13.0}
+
+** 6 features, smithy, village, laboratory, festival, market, 800 games, model chooses only gain actions
+*** linear model
+***** entropy_loss_weight=0
+{'model_chooser': 42.0, 'big_money_provinces_only': 8.0}
+*** linear model + 1 hidden layer with 8 nodes
+***** entropy_loss_weight=0
+{'model_chooser': 42.5, 'big_money_provinces_only': 7.5}
+
+** 5 features, smithy, 1600 games, model chooses all actions
+*** linear model
+{'model_chooser': 44.5, 'big_money_provinces_only': 5.5}
+*** linear model + 1 hidden layer with 8 nodes
+Didn't buy any smithies in example games!
+{'model_chooser': 44.0, 'big_money_provinces_only': 6.0}
+
+** 5 features, smithy, village, laboratory, festival, market, 1600 games, model chooses all actions
+*** linear model
+**** return entropy for distribution of valid actions
+***** entropy_loss_weight=exp(-4)
+{'model_chooser': 38.0, 'big_money_provinces_only': 12.0}
+
+***** entropy_loss_weight=exp(-2)
+{'model_chooser': 0.0, 'big_money_provinces_only': 50.0}
+
+**** WRONG entropy implementation, returned entropy for selected probability only
+***** entropy_loss_weight=exp(-2)
+{'model_chooser': 31.0, 'big_money_provinces_only': 19.0}
+{'model_chooser': 29.5, 'big_money_provinces_only': 20.5}
+
+***** entropy_loss_weight=exp(-1)
+{'model_chooser': 0.0, 'big_money_provinces_only': 50.0}
+
+***** entropy_loss_weight=0
+{'model_chooser': 36.5, 'big_money_provinces_only': 13.5}
+Gaining too many smithies?
+gain silver
+gain smithy
+gain smithy
+play smithy
+gain gold
+play smithy
+gain gold
+play smithy
+gain gold
+gain gold
+play smithy
+gain gold
+gain gold
+gain gold
+play smithy
+gain province
+play smithy
+gain province
+play smithy
+gain province
+gain duchy
+gain duchy
+play smithy
+gain estate
+gain estate
+gain province
+
+***** entropy_loss_weight=1, 800 games
+{'model_chooser': 0.0, 'big_money_provinces_only': 50.0}
+
+*** linear model + 1 hidden layer with 8 nodes
+Didn't buy any smithies in example games!
+{'model_chooser': 44.0, 'big_money_provinces_only': 6.0}
+
+
+
+
+
+
+* REINFORCE no kingdom cards
 ** BEST MODEL (don't have weights)
+*** 1 feature: num provinces minus 0, 1 linear layer, init bias to zero
+**** 1600 iterations with RunningStatisticsNorm1d mean only, momentum=0.0001
+{'model_chooser': 45.0, 'big_money_provinces_only': 5.0}
+tensor([[ 0.1801],
+        [ 0.6483],
+        [ 1.4976],
+        [-0.9318],
+        [-1.2655],
+        [-0.3527],
+        [ 0.1159],
+        [ 0.1595]])
+tensor([-1.6654,  0.9505,  1.6536, -1.9874,  0.5069,  7.0223, -3.7058, -1.8533])
+*** 
 5 input features, 1 hidden layer with 8 nodes, weight_decay=0
 batch size of 1 games, 1600 epochs
 lr=math.exp(-4)
 {'model_chooser': 44.5, 'big_money_provinces_only': 5.5}
-
 
 ** 5 input features, 1 hidden layer with 4 nodes, weight decay=0
 *** batch size of 2 games, 200 epochs
@@ -183,6 +315,9 @@ tensor([-1.6654,  0.9505,  1.6536, -1.9874,  0.5069,  7.0223, -3.7058, -1.8533])
 
 {'model_chooser': 39.0, 'big_money_provinces_only': 11.0}
 
+** 1600 iterations with RunningStatisticsNorm1d mean and variance, momentum=0.0001
+{'model_chooser': 39.0, 'big_money_provinces_only': 11.0}
+
 
 * 4 features: num provinces minus 0, player_vp_lead, one_province_remaining, two_provinces_reamining, 1 linear layer, init bias to zero
 ** 1600 iterations with RunningStatisticsNorm1d mean only, momentum=0.0001, weight decay exp(-5)
@@ -193,6 +328,54 @@ tensor([-1.6654,  0.9505,  1.6536, -1.9874,  0.5069,  7.0223, -3.7058, -1.8533])
 {'model_chooser': 25.5, 'big_money_provinces_only': 24.5}
 ** 3200 iterations with RunningStatisticsNorm1d mean only, momentum=0.0001, weight decay 0
 {'model_chooser': 18.5, 'big_money_provinces_only': 31.5}
+
+** 1600 iterations with RunningStatisticsNorm1d mean and variance, momentum=0.0001, weight decay 0
+{'model_chooser': 41.0, 'big_money_provinces_only': 9.0}
+
+
+* 4 features: num provinces minus 0, player_vp_lead, max_turns_per_player, one_province_remaining, two_provinces_reamining, 1 linear layer, init bias to zero
+** 1600 iterations with RunningStatisticsNorm1d mean and variance, momentum=0.0001, weight decay 0
+*** sum of linear + path with hidden layer width 4 and ReLU
+{'model_chooser': 41.0, 'big_money_provinces_only': 9.0}
+
+*** sum of linear + path with hidden layer width 4 and ReLU - 5 features (added turn number)
+{'model_chooser': 37.0, 'big_money_provinces_only': 13.0}
+
+*** sum of linear + path with hidden layer width 8 and ReLU - 5 features (added turn number)
+{'model_chooser': 37.5, 'big_money_provinces_only': 12.5}
+
+*** sum of linear + path with hidden layer width 8 then hidden layer width 8 with ReLU - 5 features (added turn number)
+{'model_chooser': 38.0, 'big_money_provinces_only': 12.0}
+
+*** sum of linear + path with hidden layer width 8 then hidden layer width 8 then hidden layer width 8 with ReLU - 5 features (added turn number)
+{'model_chooser': 0.0, 'big_money_provinces_only': 50.0}
+
+
+* 5 features: num provinces minus 0, player_vp_lead, max_turns_per_player, one_province_remaining, two_provinces_reamining, 1 linear layer, init bias to zero
+** 1600 iterations with RunningStatisticsNorm1d mean and variance, momentum=0.0001, weight decay 0
+Gamma=1
+VP_REWARD_MULTIPLIER gives reward for each action that gains (or loses) vps, multiplied by VP_REWARD_MULTIPLIER
+*** VP_REWARD_MULTIPLIER = 0.00
+{'model_chooser': 43.0, 'big_money_provinces_only': 7.0}
+
+*** VP_REWARD_MULTIPLIER = 0.005
+{'model_chooser': 44.0, 'big_money_provinces_only': 6.0}
+
+*** VP_REWARD_MULTIPLIER = 0.01
+{'model_chooser': 43.5, 'big_money_provinces_only': 6.5}
+
+*** VP_REWARD_MULTIPLIER = 0.02
+{'model_chooser': 31.0, 'big_money_provinces_only': 19.0}
+
+*** VP_REWARD_MULTIPLIER = 0.04
+{'model_chooser': 37.0, 'big_money_provinces_only': 13.0}
+
+*** VP_REWARD_MULTIPLIER = 0.08
+{'model_chooser': 41.0, 'big_money_provinces_only': 9.0}
+
+*** VP_REWARD_MULTIPLIER = 0.16
+{'model_chooser': 36.0, 'big_money_provinces_only': 14.0}
+
 
 
 
