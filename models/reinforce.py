@@ -1,8 +1,7 @@
 from typing import Iterator, Callable
 import math
 
-import actions
-from actions import NUM_ACTIONS, GainCard
+from actions import NUM_ACTIONS, GainMostExpensiveCardAvailable, GainCardInsteadOfMoreExpensiveCard
 from cards import card_name_to_card, CARD_LIST
 from chooser import Chooser
 from featurizer import game_outcome_to_reward
@@ -24,11 +23,13 @@ from pytorch.dataloader import tensorify_inputs, NUM_INPUT_FEATURES
 from pytorch.running_statistics_norm import RunningStatisticsNorm1d
 from pytorch.sum_modules import SumModules
 
-MAX_EPOCHS=1600
+MAX_EPOCHS=800
 VP_REWARD_MULTIPLIER = 0.00
-ACTION_TO_REWARD = {GainCard(card): VP_REWARD_MULTIPLIER
-                                    * (card.vp_effects[0].value if len(card.vp_effects) > 0 else 0)
-                    for card in CARD_LIST}
+ACTION_TO_REWARD = {}
+for card in CARD_LIST:
+    _card_reward = VP_REWARD_MULTIPLIER * (card.vp_effects[0].value if len(card.vp_effects) > 0 else 0)
+    ACTION_TO_REWARD[GainMostExpensiveCardAvailable(card)] = _card_reward
+    ACTION_TO_REWARD[GainCardInsteadOfMoreExpensiveCard(card)] = _card_reward
 
 
 class DatasetFromCallable(IterableDataset):
@@ -53,7 +54,7 @@ class PolicyGradientModel(L.LightningModule):
     def generate_batch(self):
         chooser_function = strategies.combination_of_gaining_strategy_and_playing_strategy(
             gaining_strategy=strategies.wrap_with_epsilon_greedy(strategies.pytorch_sampled_action_strategy(self.policy_model),
-                                                                 epsilon=0.4),
+                                                                 epsilon=0.0),
             playing_strategy=strategies.play_plus_actions_first)
         choosers = [Chooser(f) for f in [chooser_function] * 2]
         _, _ = play.play_n_games(

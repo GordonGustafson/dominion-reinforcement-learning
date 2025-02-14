@@ -10,13 +10,13 @@ from cards import GameState, TurnPhase, move_specific_card_to_played_actions, mo
     non_current_player_indices, gain_card_by_player_index, take_top_card_off_of_deck, is_treasure_other_than_a_copper, \
     card_sequence_to_card_counts, add_card_counts, add_card, CARD_DICT, num_copies_of_card, \
     do_cleanup_phase, initial_game_state, get_total_player_vp, GameOutcome
-from actions import GainCard, GainNothing, GainCardToHand, PlayActionCard, PlayNoActionCard, DiscardCard, \
+from actions import GainMostExpensiveCardAvailable, GainNothing, GainCardToHand, PlayActionCard, PlayNoActionCard, \
+    DiscardCard, \
     DiscardCardToDrawACard, DontDiscardCardToDrawACard, PutCardFromDiscardPileOntoDeck, \
     PutNoCardFromDiscardPileOntoDeck, TrashCardFromHand, TrashNoCardFromHand, TrashRevealedCard, \
     TrashCardFromHandToGainCardCostingUpTo2More, TrashTreasureCardFromHandToGainTreasureCardToHandCostingUpTo3More, \
     TrashNoTreasureCardFromHandToGainTreasureCardToHandCostingUpTo3More, TrashACopperFor3Money, \
-    DontTrashACopperFor3Money, PlayAllTreasures, Action
-
+    DontTrashACopperFor3Money, PlayAllTreasures, Action, GainCardInsteadOfMoreExpensiveCard
 
 MAX_TURNS = 100
 
@@ -99,9 +99,13 @@ def gainable_cards_to_choices(game_state: GameState,
     """
     Returns empty list if gainable_cards is empty
     """
+    if len(gainable_cards) == 0:
+        return []
+    highest_gainable_card_cost = max(card.cost for card in gainable_cards)
     return [Choice(game_state=gain_card_current_player(game_state, card)
                    ._replace(total_money=game_state.total_money - (card.cost if pay_card_cost else 0)),
-                   action=GainCard(card))
+                   action=(GainMostExpensiveCardAvailable(card) if card.cost == highest_gainable_card_cost
+                           else GainCardInsteadOfMoreExpensiveCard(card)))
             for card in gainable_cards]
 
 

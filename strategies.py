@@ -1,6 +1,7 @@
 from collections.abc import Callable
 
-from actions import action_to_action_id, GainNothing, GainCard, PlayActionCard, PlayNoActionCard
+from actions import action_to_action_id, GainNothing, GainMostExpensiveCardAvailable, PlayActionCard, PlayNoActionCard, \
+    GainCardInsteadOfMoreExpensiveCard
 from chooser import Chooser
 from game import Choice
 from pytorch.dataloader import tensorify_inputs
@@ -97,7 +98,7 @@ def wrap_with_epsilon_greedy(chooser_function: ChooserFunction, epsilon: float) 
 def combination_of_gaining_strategy_and_playing_strategy(gaining_strategy: ChooserFunction, playing_strategy: ChooserFunction) -> ChooserFunction:
     def choose_with_appropriate_strategy(chooser: Chooser, game_state: GameState, choices: List[Choice], player_index: int) -> int:
         possible_actions = [choice.action for choice in choices]
-        if all(type(action) in {GainCard, GainNothing} for action in possible_actions):
+        if all(type(action) in {GainMostExpensiveCardAvailable, GainCardInsteadOfMoreExpensiveCard, GainNothing} for action in possible_actions):
             return gaining_strategy(chooser, game_state, choices, player_index)
         return playing_strategy(chooser, game_state, choices, player_index)
 

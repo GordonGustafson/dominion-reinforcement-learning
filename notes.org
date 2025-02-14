@@ -12,6 +12,14 @@ nonparametric model - no assumption about the distribution of the parameter
 5 features: "player_vp_lead", "num_provinces_remaining", "max_turns_per_player", "two_provinces_remaining", "one_province_remaining",
 6 features: add "average_treasure_value_self"
 
+** 14 features, smithy, village, laboratory, festival, market, 1600 games, model chooses only gain actions, separate actions for gaining a card instead of a more expensive card
+*** linear model + 1 hidden layer with 8 nodes,
+***** entropy_loss_weight=0, epsilon=0.0
+800  games: {'model_chooser': 38.5, 'big_money_provinces_only': 11.5}
+1600 games: {'model_chooser': 41.0, 'big_money_provinces_only': 9.0} 
+3200 games: {'model_chooser': 29.0, 'big_money_provinces_only': 21.0}
+6400 games: {'model_chooser': 21.5, 'big_money_provinces_only': 28.5}
+
 ** 14 features, smithy, village, laboratory, festival, market, 800 games, model chooses only gain actions
 add num copper, silver, gold, and smithy, village, laboratory, festival, market owned
 *** linear model
@@ -19,6 +27,8 @@ add num copper, silver, gold, and smithy, village, laboratory, festival, market 
 {'model_chooser': 43.5, 'big_money_provinces_only': 6.5}
 
 *** linear model + 1 hidden layer with 8 nodes
+***** entropy_loss_weight=0, epsilon=0.4, separate actions for gaining a card instead of a more expensive card
+{'model_chooser': 28.0, 'big_money_provinces_only': 22.0}
 ***** entropy_loss_weight=0, epsilon=0.4
 {'model_chooser': 31.5, 'big_money_provinces_only': 18.5}
 ***** entropy_loss_weight=0, epsilon=0.2

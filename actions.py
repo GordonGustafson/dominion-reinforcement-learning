@@ -5,11 +5,18 @@ from cards import Card, CARD_LIST
 
 
 @dataclass(frozen=True)
-class GainCard:
+class GainMostExpensiveCardAvailable:
     card: Card
 
     def get_description(self) -> str:
         return f"gain {self.card.name}"
+
+@dataclass(frozen=True)
+class GainCardInsteadOfMoreExpensiveCard:
+    card: Card
+
+    def get_description(self) -> str:
+        return f"gain {self.card.name} instead of more expensive card"
 
 
 @dataclass(frozen=True)
@@ -151,7 +158,8 @@ class PlayAllTreasures:
 
 # We're modeling gaining and buying cards as the same action for now for better generalization.
 _ACTION_TYPES_WITH_ANY_CARD_PARAMETER = [
-    GainCard,
+    GainMostExpensiveCardAvailable,
+    GainCardInsteadOfMoreExpensiveCard,
 #    GainCardToHand,
 #    DiscardCard,
 #    DiscardCardToDrawACard,
