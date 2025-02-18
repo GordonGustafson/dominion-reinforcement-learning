@@ -26,6 +26,7 @@ from pytorch.running_statistics_norm import RunningStatisticsNorm1d
 from pytorch.sum_modules import SumModules
 
 MAX_EPOCHS=1600
+VALIDATION_GAMES=50
 VP_REWARD_MULTIPLIER = 0.00
 ACTION_TO_REWARD = {}
 for card in CARD_LIST:
@@ -158,11 +159,13 @@ class PolicyGradientModel(L.LightningModule):
                     gaining_strategy=strategies.pytorch_max_action_score_strategy(self.policy_model),
                     playing_strategy=strategies.play_plus_actions_first)),
                 Chooser(strategies.big_money_provinces_only)],
-            n=50,
+            n=VALIDATION_GAMES,
             action_to_reward=ACTION_TO_REWARD)
 
         self.val_epochs.append(self.current_epoch)
         self.win_rate_metrics.append(win_rates["model_chooser"])
+        win_percentage = win_rates["model_chooser"] / VALIDATION_GAMES
+        torch.save(self.policy_model.state_dict(), f"epoch={self.current_epoch}-win_percentage={win_percentage}.ckpt")
 
     def on_validation_epoch_end(self) -> None:
         pass
