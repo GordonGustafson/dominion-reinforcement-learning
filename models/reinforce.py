@@ -27,6 +27,7 @@ from pytorch.running_statistics_norm import RunningStatisticsNorm1d
 from pytorch.sum_modules import SumModules
 
 MAX_EPOCHS=1600
+MAX_EPOCHS=3200
 VALIDATION_GAMES=50
 VP_REWARD_MULTIPLIER = 0.00
 ACTION_TO_REWARD = {}
@@ -67,7 +68,7 @@ class PolicyGradientModel(L.LightningModule):
     def generate_batch(self):
         chooser_function = strategies.combination_of_gaining_strategy_and_playing_strategy(
             gaining_strategy=strategies.wrap_with_epsilon_greedy(strategies.pytorch_sampled_action_strategy(self.policy_model,
-                                                                                                            temperature=math.exp(0)),
+                                                                                                            temperature=math.exp(3)),
                                                                  epsilon=0.0),
             playing_strategy=strategies.play_plus_actions_first)
         choosers = [Chooser(f) for f in [chooser_function] * 2]
@@ -190,23 +191,23 @@ class PolicyGradientModel(L.LightningModule):
                                           betas=(0.9, 0.999),
                                           weight_decay=0)
             optimizers.append(state_value_model_optimizer)
-       #  policy_model_lr_scheduler = torch.optim.lr_scheduler.OneCycleLR(policy_model_optimizer,
-       #                                                                  max_lr=math.exp(-4),
-       #                                                                  total_steps=MAX_EPOCHS,
-       #                                                                  pct_start=0.5,
-       #                                                                  anneal_strategy='cos',
-       #                                                                  cycle_momentum=False,
-       #                                                                  base_momentum=0.9,
-       #                                                                  max_momentum=0.9,
-       #                                                                  div_factor=1,
-       #                                                                  final_div_factor=math.exp(1))
+        policy_model_lr_scheduler = torch.optim.lr_scheduler.OneCycleLR(policy_model_optimizer,
+                                                                        max_lr=math.exp(-4),
+                                                                        total_steps=MAX_EPOCHS,
+                                                                        pct_start=0.3,
+                                                                        anneal_strategy='cos',
+                                                                        cycle_momentum=False,
+                                                                        base_momentum=0.9,
+                                                                        max_momentum=0.9,
+                                                                        div_factor=1,
+                                                                        final_div_factor=math.exp(1))
 
-       #  lr_schedulers = [policy_model_lr_scheduler]
-        lr_schedulers = []
+        lr_schedulers = [policy_model_lr_scheduler]
+        # lr_schedulers = []
         return optimizers, lr_schedulers
 
 def get_policy_model():
-    hidden_layer_width = 8
+    hidden_layer_width = 16
     num_model_outputs = NUM_ACTIONS
     final_linear_layer = torch.nn.Linear(NUM_INPUT_FEATURES, num_model_outputs, bias=True)
     torch.nn.init.xavier_uniform_(final_linear_layer.weight, gain=1.0)
@@ -262,7 +263,7 @@ def train_reinforce_model(output_path: Path):
     trainer = L.Trainer(max_epochs=MAX_EPOCHS, check_val_every_n_epoch=200)
     trainer.fit(model=wrapped_model)
 
-    print(f"policy_model.win_rate_metrics: {wrapped_model.win_rate_metrics}")
+    print(f"policy_model.win_rate_metrics: {MAX_EPOCHS} games: {wrapped_model.win_rate_metrics} peak: {max(wrapped_model.win_rate_metrics)}")
     plot(x=wrapped_model.val_epochs, y=wrapped_model.win_rate_metrics)
 
     print("Actions taken by policy_model in sample games:")

@@ -48,7 +48,87 @@ desktop: 5 minutes
         "max_turns_per_player",
         "two_provinces_remaining",
         "one_province_remaining",
-*** linear model + 1 hidden layer with 8 nodes
+
+*** various models, entropy_loss_weight=0, epsilon=0.0 softmax temperature: exp(3)
+OneCycleLR(policy_model_optimizer, max_lr=math.exp(-4), total_steps=MAX_EPOCHS, pct_start=0.3, anneal_strategy='cos', cycle_momentum=False, base_momentum=0.9, max_momentum=0.9, div_factor=1, final_div_factor=math.exp(1))
+**** 1 hidden layer with 16 nodes
+3200 games: [0.0, 26.5, 41.5, 46.0, 39.0, 42.5, 39.5, 43.0, 47.5, 44.0, 47.0, 44.5, 45.0, 46.5, 44.5, 28.0, 13.0] peak: 47.5
+3200 games: [0.0, 35.5, 34.0, 32.5, 36.0, 35.0, 34.5, 32.0, 29.5, 35.5, 40.0, 38.5, 41.0, 29.0, 38.5, 34.0, 35.5]
+
+
+**** 1 hidden layer with 32 nodes
+3200 games: [0.0, 31.5, 38.0, 31.5, 38.0, 32.5, 34.5, 35.0, 40.5, 14.0, 40.5, 40.5, 29.0, 37.5, 38.5, 33.0, 41.5] peak: 41.5
+
+**** 2 hidden layer with 8 nodes
+3200 games: [0.0, 36.0, 21.5, 22.5, 21.0, 25.0, 27.5, 40.5, 35.0, 40.0, 34.5, 34.0, 38.0, 34.5, 32.5, 39.5, 43.5] peak: 43.5
+
+**** 2 hidden layer with 16 nodes
+[0.0, 39.0, 34.5, 33.5, 33.5, 31.5, 26.5, 39.5, 36.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0] peak: 39.5
+
+
+*** linear model + 1 hidden layer with 8 nodes - temperature and LR schedule
+observation: 
+**** entropy_loss_weight=0, epsilon=0.0 softmax temperature: exp(3)
+***** OneCycleLR(policy_model_optimizer, max_lr=math.exp(-4), total_steps=MAX_EPOCHS, pct_start=0.3, anneal_strategy='cos', cycle_momentum=False, base_momentum=0.9, max_momentum=0.9, div_factor=1, final_div_factor=math.exp(1))
+3200 games: [0.0, 21.0, 17.0, 16.5, 21.0, 29.0, 38.0, 34.5, 40.5, 46.0, 37.0, 41.5, 47.5, 44.0, 35.5, 44.0, 36.5] peak: 47.5
+3200 games: [0.0, 28.0, 37.0, 39.5, 32.0, 42.5, 38.0, 38.0, 33.0, 38.5, 40.5, 41.5, 44.0, 37.5, 42.5, 33.0, 43.0] peak: 44.0
+3200 games: [0.0, 33.0, 35.0, 40.5, 37.0, 30.5, 39.0, 26.0, 33.5, 31.0, 31.0, 42.0, 40.5, 41.0, 41.5, 45.5, 42.0] peak: 45.5
+6400 games: [0.0, 31.5, 33.5, 29.0, 23.0, 28.0, 25.5, 26.5, 29.0, 44.0, 45.0, 41.5, 41.0, 43.0, 43.0, 39.0, 46.0, 45.0, 44.5, 44.0, 42.0, 40.0, 39.0, 43.5, 44.5, 44.0, 42.0, 43.5, 41.0, 40.5, 48.0, 41.0, 39.0] peak: 48.0
+
+***** OneCycleLR(policy_model_optimizer, max_lr=math.exp(-4), total_steps=MAX_EPOCHS, pct_start=0.3, anneal_strategy='cos', cycle_momentum=False, base_momentum=0.9, max_momentum=0.9, div_factor=1, final_div_factor=math.exp(2))
+3200 games: [0.0, 30.0, 38.0, 37.0, 34.5, 41.0, 37.0, 44.0, 38.5, 39.0, 42.5, 43.0, 45.0, 42.0, 44.5, 43.0, 46.0] peak: 46.0
+6400 games: [0.0, 0.5, 28.0, 38.5, 44.0, 41.5, 37.0, 39.0, 43.0, 36.5, 34.5, 45.0, 38.5, 40.5, 41.5, 44.0, 39.5, 40.0, 37.0, 42.5, 39.0, 36.5, 41.0, 36.0, 39.5, 40.0, 42.0, 39.5, 37.0, 43.5, 43.0, 37.5, 34.0] peak: 45.0
+
+***** OneCycleLR(policy_model_optimizer, max_lr=math.exp(-4), total_steps=MAX_EPOCHS, pct_start=0.3, anneal_strategy='cos', cycle_momentum=False, base_momentum=0.9, max_momentum=0.9, div_factor=1, final_div_factor=math.exp(3))
+3200 games: [0.0, 15.0, 35.5, 40.0, 42.0, 44.5, 38.5, 43.0, 43.5, 31.0, 26.0, 34.5, 27.5, 32.5, 33.0, 31.5, 34.5] peak: 44.5
+
+***** OneCycleLR(policy_model_optimizer, max_lr=math.exp(-4), total_steps=MAX_EPOCHS, pct_start=0.3, anneal_strategy='cos', cycle_momentum=False, base_momentum=0.9, max_momentum=0.9, div_factor=1, final_div_factor=math.exp(4))
+3200 games: [0.0, 17.5, 19.0, 16.0, 16.5, 17.5, 21.5, 16.0, 22.5, 15.0, 20.5, 20.5, 20.5, 19.5, 39.5, 41.5, 39.0] peak: 41.5
+
+
+
+**** entropy_loss_weight=0, epsilon=0.0
+***** no lr scheduler, RunningStatisticsNorm1d(affine=True), softmax temperature: exp(-3)
+1600 games: [0.0, 0.0, 2.5, 3.0, 1.5, 4.5, 1.0, 2.0, 0.0] peak: 4.5
+
+***** no lr scheduler, RunningStatisticsNorm1d(affine=True), softmax temperature: exp(-2)
+1600 games: [0.0, 0.0, 0.0, 1.0, 0.5, 3.5, 4.0, 3.5, 2.0] peak: 4.0
+
+***** no lr scheduler, RunningStatisticsNorm1d(affine=True), softmax temperature: exp(-1)
+1600 games: [0.0, 12.5, 11.5, 14.0, 19.5, 35.0, 27.0, 36.5, 33.5] peak: 36.5
+
+***** no lr scheduler, RunningStatisticsNorm1d(affine=True), softmax temperature: exp(0)
+1600 games: [0.0, 33.0, 34.5, 43.0, 36.5, 4.5, 35.0, 35.0, 34.5] peak: 43.0
+3200 games: [0.0, 0.0, 0.0, 18.5, 17.5, 32.5, 36.0, 30.5, 34.5, 34.0, 35.5, 37.0, 34.5, 28.0, 31.5, 30.0, 35.5] peak: 37.0
+
+***** no lr scheduler, RunningStatisticsNorm1d(affine=True), softmax temperature: exp(1)
+1600 games: [0.0, 28.5, 35.0, 40.0, 32.0, 30.5, 33.0, 34.5, 33.5] peak: 40.0
+3200 games: [0.0, 8.0, 8.0, 8.5, 24.5, 23.5, 19.0, 24.5, 23.5, 29.0, 30.5, 31.5, 29.5, 32.5, 28.5, 31.0, 33.0] peak: 33.0
+
+***** no lr scheduler, RunningStatisticsNorm1d(affine=True), softmax temperature: exp(2)
+1600 games: [0.0, 4.0, 37.0, 39.5, 4.0, 35.5, 33.5, 39.5, 39.0] peak: 39.5
+[0.0, 10.5, 29.0, 32.5, 27.5, 35.0, 42.0, 40.0, 43.5, 40.0, 42.5, 39.5, 31.0, 27.0, 21.0, 23.5, 27.0]: peak:43.5
+
+***** no lr scheduler, RunningStatisticsNorm1d(affine=True), softmax temperature: exp(3)
+1600 games: [0.0, 18.5, 34.0, 41.0, 37.5, 30.5, 37.5, 24.0, 34.0] peak: 41.0
+3200 games: [0.0, 32.5, 34.0, 39.0, 42.5, 42.5, 39.0, 41.0, 40.0, 44.0, 45.5, 42.5, 43.0, 42.5, 39.5, 40.5, 36.5] peak: 45.5
+
+***** no lr scheduler, RunningStatisticsNorm1d(affine=True), softmax temperature: exp(4)
+1600 games: [0.0, 40.0, 37.5, 37.5, 31.0, 43.5, 39.5, 38.5, 41.0] peak: 43.5
+3200 games: [0.0, 36.0, 39.0, 31.0, 33.5, 33.5, 37.0, 34.5, 35.0, 34.5, 37.0, 38.0, 38.0, 35.0, 32.0, 30.0, 32.0] peak: 39.0
+
+***** no lr scheduler, RunningStatisticsNorm1d(affine=True), softmax temperature: exp(5)
+1600 games: [0.0, 5.0, 34.5, 33.0, 37.5, 33.5, 37.0, 31.5, 36.5] peak: 37.5
+3200 games: [0.0, 24.0, 30.5, 35.5, 34.0, 41.5, 46.0, 35.0, 38.5, 39.0, 36.0, 39.0, 45.5, 44.0, 41.0, 39.5, 39.0] peak: 46.0 after 1200 games
+
+***** no lr scheduler, RunningStatisticsNorm1d(affine=True), softmax temperature: exp(8)
+1600 games: [0.0, 0.0, 2.5, 26.0, 35.0, 37.0, 36.0, 35.5, 33.5] peak: 37.0
+
+***** no lr scheduler, RunningStatisticsNorm1d(affine=True), softmax temperature: exp(12)
+1600 games: [0.0, 0.0, 0.0, 0.0, 8.0, 15.0, 34.0, 38.5, 38.0] peak: 38.5
+
+        
+*** linear model + 1 hidden layer with 8 nodes - dropout
 **** entropy_loss_weight=0, epsilon=0.0
 ***** no lr scheduler, RunningStatisticsNorm1d(affine=True)
 3200 games: [0.0, 8.0, 37.0, 41.5, 45.0, 44.5, 31.5, 41.0, 33.0, 32.0, 35.0, 33.5, 32.5, 34.5, 34.0, 37.0, 28.5] best: 45.0 after 800 epochs
