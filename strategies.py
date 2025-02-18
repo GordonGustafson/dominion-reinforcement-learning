@@ -65,14 +65,15 @@ def pytorch_max_action_score_strategy(pytorch_model) -> ChooserFunction:
 
     return choose_with_model
 
-def pytorch_sampled_action_strategy(pytorch_model) -> ChooserFunction:
+def pytorch_sampled_action_strategy(pytorch_model, temperature: float) -> ChooserFunction:
     def sample_from_model(chooser: Chooser, game_state: GameState, choices: List[Choice], player_index: int) -> int:
         action_scores = pytorch_model.forward(
             tensorify_inputs(featurizer.game_state_to_df(game_state, player_index)))
         action_scores = action_scores.squeeze()
         valid_action_ids = [action_to_action_id(choice.action) for choice in choices]
         choice_scores = torch.index_select(input=action_scores, dim=0, index=torch.tensor(valid_action_ids))
-        action_probabilities = torch.nn.functional.softmax(choice_scores, dim=0)
+        action_probabilities = torch.nn.functional.softmax(choice_scores / temperature, dim=0)
+        chooser.valid_action_probabilities.append(action_probabilities)
         distribution = torch.distributions.Categorical(probs=action_probabilities)
         selected_choice_index = distribution.sample().item()
         chooser.action_probability_tensors.append(action_probabilities[selected_choice_index])

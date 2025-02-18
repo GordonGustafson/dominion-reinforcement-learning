@@ -59,7 +59,8 @@ class PolicyGradientModel(L.LightningModule):
 
     def generate_batch(self):
         chooser_function = strategies.combination_of_gaining_strategy_and_playing_strategy(
-            gaining_strategy=strategies.wrap_with_epsilon_greedy(strategies.pytorch_sampled_action_strategy(self.policy_model),
+            gaining_strategy=strategies.wrap_with_epsilon_greedy(strategies.pytorch_sampled_action_strategy(self.policy_model,
+                                                                                                            temperature=math.exp(0)),
                                                                  epsilon=0.0),
             playing_strategy=strategies.play_plus_actions_first)
         choosers = [Chooser(f) for f in [chooser_function] * 2]
@@ -68,6 +69,10 @@ class PolicyGradientModel(L.LightningModule):
             choosers=choosers,
             n=1,
             action_to_reward=ACTION_TO_REWARD)
+        # for tensor in choosers[0].valid_action_probabilities:
+        #     print(tensor.max())
+        #all_model_1_valid_action_probabilities = torch.stack(choosers[0].valid_action_probabilities, dim=0)
+        #print(f"max action probabilities: {all_model_1_valid_action_probabilities.max(dim=1)}")
         list_of_game_dfs = [featurizer.game_history_to_df(chooser.state_action_pairs,
                                                           chooser.game_outcome,
                                                           player_index,
@@ -153,7 +158,7 @@ class PolicyGradientModel(L.LightningModule):
                     gaining_strategy=strategies.pytorch_max_action_score_strategy(self.policy_model),
                     playing_strategy=strategies.play_plus_actions_first)),
                 Chooser(strategies.big_money_provinces_only)],
-            n=50,
+            n=1,
             action_to_reward=ACTION_TO_REWARD)
 
         self.val_epochs.append(self.current_epoch)
@@ -204,15 +209,11 @@ def get_policy_model():
     return torch.nn.Sequential(
         RunningStatisticsNorm1d(NUM_INPUT_FEATURES, momentum=0.0001, affine=True),
         SumModules([
-            torch.nn.Sequential(
-                final_linear_layer,
-                torch.nn.Dropout(0.1),
-            ),
+            final_linear_layer,
             torch.nn.Sequential(
                 torch.nn.Linear(NUM_INPUT_FEATURES, hidden_layer_width, bias=True),
                 torch.nn.ReLU(),
                 torch.nn.Linear(hidden_layer_width, num_model_outputs, bias=False),
-                torch.nn.Dropout(0.1),
             ),
         ])
     )

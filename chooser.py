@@ -13,6 +13,7 @@ class Chooser(object):
         self.game_outcome: Optional[GameOutcome] = None
         self.action_probability_tensors: List[torch.Tensor] = []
         self.valid_action_distribution_entropies: List[torch.Tensor] = []
+        self.valid_action_probabilities: List[torch.Tensor] = []
 
     def make_choice(self, game_state: GameState, choices: List[Choice], player_index: int) -> int:
         selected_action = self.chooser_func(self, game_state, choices, player_index)

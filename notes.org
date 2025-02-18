@@ -8,6 +8,10 @@ nonparametric model - no assumption about the distribution of the parameter
 * TODO two different models training against each other?
 
 
+* 1600 games with eval every 200 games
+laptop: 17.5 minutes
+desktop: 5 minutes
+
 * REINFORCE with kingdom cards
 5 features: "player_vp_lead", "num_provinces_remaining", "max_turns_per_player", "two_provinces_remaining", "one_province_remaining",
 6 features: add "average_treasure_value_self"
@@ -57,6 +61,9 @@ nonparametric model - no assumption about the distribution of the parameter
 1600 games: [0.0, 16.5, 35.0, 22.5, 37.5, 42.0, 0.0, 30.5, 27.5]
 
 
+***** no lr scheduler, RunningStatisticsNorm1d(affine=True), dropout=0.1 after both final linear layers
+1600 games: [0.0, 1.5, 3.0, 6.0, 3.0, 1.5, 8.0, 4.0, 10.5]
+1600 games on desktop: best was 33.5
 
 ***** no lr scheduler, RunningStatisticsNorm1d(affine=True), dropout=0.5 after feature norm
 1600 games: [0.0, 39.0, 33.0, 33.5, 38.5, 31.5, 36.0, 35.0, 36.0]
