@@ -1,6 +1,7 @@
 from typing import Iterator, Callable
 import math
 
+from pathlib import Path
 import matplotlib.pyplot as plt
 
 from actions import NUM_ACTIONS, GainMostExpensiveCardAvailable, GainCardInsteadOfMoreExpensiveCard
@@ -47,13 +48,18 @@ def concat_zero_dimensional_tensors(zero_dimensional_tensors: list[torch.Tensor]
     return torch.cat(one_dimensional_tensors)
 
 class PolicyGradientModel(L.LightningModule):
-    def __init__(self, policy_model: torch.nn.Module, state_value_model: torch.nn.Module | None, entropy_loss_weight: float):
+    def __init__(self, policy_model: torch.nn.Module,
+                 state_value_model: torch.nn.Module | None,
+                 entropy_loss_weight: float,
+                 output_path: Path):
         super().__init__()
         self.policy_model = policy_model
         self.state_value_model = state_value_model
         self.entropy_loss_weight = entropy_loss_weight
-        self.automatic_optimization = False
+        self.output_path = output_path
+        self.output_path.mkdir(exist_ok=True)
 
+        self.automatic_optimization = False
         self.val_epochs = []
         self.win_rate_metrics = []
 
@@ -165,7 +171,8 @@ class PolicyGradientModel(L.LightningModule):
         self.val_epochs.append(self.current_epoch)
         self.win_rate_metrics.append(win_rates["model_chooser"])
         win_percentage = win_rates["model_chooser"] / VALIDATION_GAMES
-        torch.save(self.policy_model.state_dict(), f"epoch={self.current_epoch}-win_percentage={win_percentage}.ckpt")
+        filename = f"epoch={self.current_epoch}-win_percentage={win_percentage}.ckpt"
+        torch.save(self.policy_model.state_dict(), self.output_path / filename)
 
     def on_validation_epoch_end(self) -> None:
         pass
@@ -245,12 +252,13 @@ def plot(x, y):
     plt.grid(True)
     plt.show()
 
-def train_reinforce_model():
+def train_reinforce_model(output_path: Path):
     policy_model = get_policy_model()
     state_value_model = get_state_value_model()
     wrapped_model = PolicyGradientModel(policy_model=policy_model,
                                         state_value_model=state_value_model,
-                                        entropy_loss_weight=0.0)
+                                        entropy_loss_weight=0.0,
+                                        output_path=output_path)
     trainer = L.Trainer(max_epochs=MAX_EPOCHS, check_val_every_n_epoch=200)
     trainer.fit(model=wrapped_model)
 
