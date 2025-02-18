@@ -4,15 +4,190 @@ parametric models - assume a priori the distribution of each parameter
 nonparametric model - no assumption about the distribution of the parameter
 
 * TODO PPO
-* TODO Play 50 games against a baseline strategy every N epochs and plot the result
-* TODO Why do models seem to stop changing?
-** TODO Plot gradient magnitude over time
+* TODO entropy regularization over all actions, not just eligible ones.
+* TODO two different models training against each other?
+
 
 * REINFORCE with kingdom cards
 5 features: "player_vp_lead", "num_provinces_remaining", "max_turns_per_player", "two_provinces_remaining", "one_province_remaining",
 6 features: add "average_treasure_value_self"
+10 features: add "num_copper_self", "num_silver_self", "num_gold_self", "num_smithy_self"
 
-** 14 features, smithy, village, laboratory, festival, market, 1600 games, model chooses only gain actions, separate actions for gaining a card instead of a more expensive card
+** 38 features, smithy, village, laboratory, festival, market, 1600 games, model chooses only gain actions, separate actions for gaining a card instead of a more expensive card AND for gaining nothing on the second buy
+*** linear model + 2 hidden layers with 8 nodes
+***** entropy_loss_weight=0, epsilon=0.0
+
+*** linear model + 1 hidden layer with 8 nodes
+***** entropy_loss_weight=0, epsilon=0.0
+{'model_chooser': 27.5, 'big_money_provinces_only': 22.5}
+
+*** linear model + 1 hidden layer with 16 nodes
+***** entropy_loss_weight=0, epsilon=0.0
+1600 games: {'model_chooser': 0, 'big_money_provinces_only': 50.0}
+
+
+** 16 features, smithy, village, laboratory, festival, market, 1600 games, model chooses only gain actions, separate actions for gaining a card instead of a more expensive card AND for gaining nothing on the second buy
+16 features are
+        "player_vp_lead",
+        "num_provinces_remaining",
+        "average_treasure_value_self",
+        "num_vp_self",
+        "num_victory_cards_owned_self",
+        "num_copper_owned_self",
+        "num_silver_owned_self",
+        "num_gold_owned_self",
+        "num_smithy_owned_self",
+        "num_laboratory_owned",
+        "num_village_owned",
+        "num_festival_owned",
+        "num_market_owned",
+        "max_turns_per_player",
+        "two_provinces_remaining",
+        "one_province_remaining",
+*** linear model + 1 hidden layer with 8 nodes
+**** entropy_loss_weight=0, epsilon=0.0
+***** no lr scheduler, RunningStatisticsNorm1d(affine=True)
+3200 games: [0.0, 8.0, 37.0, 41.5, 45.0, 44.5, 31.5, 41.0, 33.0, 32.0, 35.0, 33.5, 32.5, 34.5, 34.0, 37.0, 28.5] best: 45.0 after 800 epochs
+
+***** no lr scheduler, RunningStatisticsNorm1d(affine=True), dropout=0.5 after both final linear layers
+1600 games: [0.0, 1.0, 11.5, 6.0, 16.0, 24.5, 27.5, 37.0, 38.0]
+
+***** no lr scheduler, RunningStatisticsNorm1d(affine=True), dropout=0.3 after both final linear layers
+1600 games: [4.5, 6.0, 1.0, 0.0, 1.0, 3.5, 2.5, 2.0, 4.0] bizarre that it started out good and got worse
+1600 games: [0.0, 16.5, 35.0, 22.5, 37.5, 42.0, 0.0, 30.5, 27.5]
+
+
+
+***** no lr scheduler, RunningStatisticsNorm1d(affine=True), dropout=0.5 after feature norm
+1600 games: [0.0, 39.0, 33.0, 33.5, 38.5, 31.5, 36.0, 35.0, 36.0]
+
+***** no lr scheduler, RunningStatisticsNorm1d(affine=True), dropout=0.3 after feature norm
+1600 games: [0.0, 31.5, 30.5, 35.5, 29.5, 29.5, 25.0, 27.5, 9.0]
+
+***** no lr scheduler, RunningStatisticsNorm1d(affine=True), dropout=0.1 after feature norm
+1600 games: [0.0, 26.5, 35.5, 33.5, 41.5, 32.5, 41.5, 42.0, 44.0]
+3200 games: [0.0, 30.5, 32.0, 34.0, 38.0, 38.5, 34.5, 43.0, 41.5, 34.5, 38.5, 36.5, 37.0, 36.0, 35.5, 40.5, 35.0]
+^in last iteration, 1st and 4th buy was estate
+
+
+
+
+** 15 features, smithy, village, laboratory, festival, market, 1600 games, model chooses only gain actions, separate actions for gaining a card instead of a more expensive card AND for gaining nothing on the second buy
+15 features are
+        "player_vp_lead",
+        "num_provinces_remaining",
+        "average_treasure_value_self",
+        "num_vp_self",
+        "num_copper_owned_self",
+        "num_silver_owned_self",
+        "num_gold_owned_self",
+        "num_smithy_owned_self",
+        "num_laboratory_owned",
+        "num_village_owned",
+        "num_festival_owned",
+        "num_market_owned",
+        "max_turns_per_player",
+        "two_provinces_remaining",
+        "one_province_remaining",
+*** linear model + 1 hidden layer with 8 nodes
+**** entropy_loss_weight=0, epsilon=0.0
+***** no lr scheduler, RunningStatisticsNorm1d(affine=True)
+3200 games: [0.0, 31.5, 37.5, 34.0, 40.5, 40.0, 39.5, 40.5, 44.0, 40.5, 35.0, 43.5, 34.0, 44.0, 42.0, 39.5, 34.5]. best: 44.0
+
+
+** 14 features, smithy, village, laboratory, festival, market, 1600 games, model chooses only gain actions, separate actions for gaining a card instead of a more expensive card AND for gaining nothing on the second buy
+14 features are
+        "player_vp_lead",
+        "num_provinces_remaining",
+        "average_treasure_value_self",
+        "num_copper_owned_self",
+        "num_silver_owned_self",
+        "num_gold_owned_self",
+        "num_smithy_owned_self",
+        "num_laboratory_owned",
+        "num_village_owned",
+        "num_festival_owned",
+        "num_market_owned",
+        "max_turns_per_player",
+        "two_provinces_remaining",
+        "one_province_remaining",
+
+*** linear model + 1 hidden layer with 8 nodes
+**** entropy_loss_weight=exp(-6), epsilon=0.0
+***** no lr scheduler, RunningStatisticsNorm1d(affine=False)
+1600 games: {'model_chooser': 29.0, 'big_money_provinces_only': 21.0}, best was 42.5 after 1400 epochs
+
+**** entropy_loss_weight=0, epsilon=0.0
+***** no lr scheduler, RunningStatisticsNorm1d(affine=True)
+1600 games: {'model_chooser': 43.5, 'big_money_provinces_only': 6.5}, best was 45.0 after 1200 epochs
+3200 games: [0.0, 11.0, 6.0, 13.5, 11.5, 20.0, 20.0, 23.5, 24.5, 15.5, 23.5, 5.0, 15.0, 14.5, 22.0, 21.5, 25.5]
+
+notes: 3200 games training managed to makes some impressive action combos, but doesn't buy gold, and doesn't buy vp when it should:
+play festival
+play laboratory
+play laboratory
+play smithy
+play festival
+play smithy
+play festival
+play laboratory
+play laboratory
+play festival
+play smithy
+play festival
+play festival
+play smithy
+play laboratory
+play laboratory
+play festival
+play smithy
+play smithy
+play smithy
+gain province
+gain festival instead of more expensive card
+gain festival instead of more expensive card
+gain festival
+gain nothing on second or later buy
+(game ended as a loss)
+
+***** no lr scheduler, RunningStatisticsNorm1d(affine=False)
+800 games:  {'model_chooser': 42.0, 'big_money_provinces_only': 8.0}
+1600 games: {'model_chooser': 39.0, 'big_money_provinces_only': 11.0}
+1600 games: {'model_chooser': 44.5, 'big_money_provinces_only': 5.5}
+3200 games: {'model_chooser': 28.5, 'big_money_provinces_only': 21.5}
+
+***** OneCycleLR(policy_model_optimizer, max_lr=math.exp(-4), total_steps=MAX_EPOCHS, pct_start=0.5, anneal_strategy='cos', cycle_momentum=True, base_momentum=0.85, max_momentum=0.95, div_factor=1, final_div_factor=math.exp(1))
+1600 games: {'model_chooser': 38.0, 'big_money_provinces_only': 12.0}
+
+***** OneCycleLR(policy_model_optimizer, max_lr=math.exp(-4), total_steps=MAX_EPOCHS, pct_start=0.5, anneal_strategy='cos', cycle_momentum=False, base_momentum=0.9, max_momentum=0.9, div_factor=1, final_div_factor=math.exp(1))
+1600 games: {'model_chooser': 37.0, 'big_money_provinces_only': 13.0}, best was 41.5 after 1000 epochs
+gained curses more than once in some games!
+
+*** linear model + 1 hidden layer with 16 nodes
+***** entropy_loss_weight=0, epsilon=0.0
+1600 games: {'model_chooser': 32.5, 'big_money_provinces_only': 17.5}
+
+
+
+** 10 features, smithy, village, laboratory, festival, market, 1600 games, model chooses only gain actions, separate actions for gaining a card instead of a more expensive card AND for gaining nothing on the second buy
+*** linear model + 1 hidden layer with 8 nodes,
+***** entropy_loss_weight=0, epsilon=0.0
+800  games: {'model_chooser': 31.0, 'big_money_provinces_only': 19.0}
+1600 games: {'model_chooser': 42.0, 'big_money_provinces_only': 8.0}
+
+** 10 features, smithy, village, laboratory, festival, market, 1600 games, model chooses only gain actions, separate actions for gaining a card instead of a more expensive card
+10 features are
+        "player_vp_lead",
+        "num_provinces_remaining",
+        "average_treasure_value_self",
+        "num_copper_owned_self",
+        "num_silver_owned_self",
+        "num_gold_owned_self",
+        "num_smithy_owned_self",
+        "max_turns_per_player",
+        "two_provinces_remaining",
+        "one_province_remaining",
+
 *** linear model + 1 hidden layer with 8 nodes,
 ***** entropy_loss_weight=0, epsilon=0.0
 800  games: {'model_chooser': 38.5, 'big_money_provinces_only': 11.5}
@@ -20,7 +195,7 @@ nonparametric model - no assumption about the distribution of the parameter
 3200 games: {'model_chooser': 29.0, 'big_money_provinces_only': 21.0}
 6400 games: {'model_chooser': 21.5, 'big_money_provinces_only': 28.5}
 
-** 14 features, smithy, village, laboratory, festival, market, 800 games, model chooses only gain actions
+** 10 features, smithy, village, laboratory, festival, market, 800 games, model chooses only gain actions
 add num copper, silver, gold, and smithy, village, laboratory, festival, market owned
 *** linear model
 ***** entropy_loss_weight=0
@@ -36,7 +211,6 @@ add num copper, silver, gold, and smithy, village, laboratory, festival, market 
 {'model_chooser': 42.5, 'big_money_provinces_only': 7.5}
 ***** entropy_loss_weight=0, epsilon=0.1
 {'model_chooser': 42.0, 'big_money_provinces_only': 8.0}
-***** entropy_loss_weight=0, epsilon=0.05
 
 
 ***** entropy_loss_weight=0

@@ -3,7 +3,7 @@ from torch.utils.data import Dataset
 
 import torch
 
-NUM_INPUT_FEATURES = 10
+NUM_INPUT_FEATURES = 16
 
 class DominionDataset(Dataset):
     def __init__(self, dataframe: pd.DataFrame) -> None:
@@ -26,15 +26,49 @@ def tensorify_inputs(df: pd.DataFrame) -> torch.tensor:
         "player_vp_lead",
         "num_provinces_remaining",
         "average_treasure_value_self",
+        "num_vp_self",
+        "num_victory_cards_owned_self",
         "num_copper_owned_self",
         "num_silver_owned_self",
         "num_gold_owned_self",
         "num_smithy_owned_self",
+        "num_laboratory_owned_self",
+        "num_village_owned_self",
+        "num_festival_owned_self",
+        "num_market_owned_self",
         #"average_treasure_value_opponent",
         "max_turns_per_player",
         "two_provinces_remaining",
         "one_province_remaining",
-                        ]].to_numpy().reshape((-1, NUM_INPUT_FEATURES)))
+
+        # "zero_copper_owned_self",
+        # "zero_silver_owned_self",
+        # "zero_gold_owned_self",
+        # "zero_smithy_owned_self",
+        # "zero_laboratory_owned_self",
+        # "zero_village_owned_self",
+        # "zero_festival_owned_self",
+        # "zero_market_owned_self",
+
+        # "one_copper_owned_self",
+        # "one_silver_owned_self",
+        # "one_gold_owned_self",
+        # "one_smithy_owned_self",
+        # "one_laboratory_owned_self",
+        # "one_village_owned_self",
+        # "one_festival_owned_self",
+        # "one_market_owned_self",
+
+        # "two_copper_owned_self",
+        # "two_silver_owned_self",
+        # "two_gold_owned_self",
+        # "two_smithy_owned_self",
+        # "two_laboratory_owned_self",
+        # "two_village_owned_self",
+        # "two_festival_owned_self",
+        # "two_market_owned_self",
+
+    ]].to_numpy().reshape((-1, NUM_INPUT_FEATURES)))
 
 def tensorify_reward(df: pd.DataFrame) -> torch.tensor:
     return torch.tensor(df[["reward"]].to_numpy().squeeze())

@@ -1,6 +1,8 @@
 from typing import Iterator, Callable
 import math
 
+import matplotlib.pyplot as plt
+
 from actions import NUM_ACTIONS, GainMostExpensiveCardAvailable, GainCardInsteadOfMoreExpensiveCard
 from cards import card_name_to_card, CARD_LIST
 from chooser import Chooser
@@ -23,7 +25,7 @@ from pytorch.dataloader import tensorify_inputs, NUM_INPUT_FEATURES
 from pytorch.running_statistics_norm import RunningStatisticsNorm1d
 from pytorch.sum_modules import SumModules
 
-MAX_EPOCHS=800
+MAX_EPOCHS=1600
 VP_REWARD_MULTIPLIER = 0.00
 ACTION_TO_REWARD = {}
 for card in CARD_LIST:
@@ -50,6 +52,10 @@ class PolicyGradientModel(L.LightningModule):
         self.state_value_model = state_value_model
         self.entropy_loss_weight = entropy_loss_weight
         self.automatic_optimization = False
+
+        self.val_epochs = []
+        self.win_rate_metrics = []
+
 
     def generate_batch(self):
         chooser_function = strategies.combination_of_gaining_strategy_and_playing_strategy(
@@ -118,9 +124,6 @@ class PolicyGradientModel(L.LightningModule):
         return train_loss.sum()
 
     def training_step(self, batch, batch_idx):
-        for parameter in self.policy_model.parameters():
-            print(parameter.data)
-
         optimizers = self.optimizers()
         policy_model_optimizer = optimizers if self.state_value_model is None else optimizers[0]
 
@@ -136,8 +139,25 @@ class PolicyGradientModel(L.LightningModule):
             self.manual_backward(loss)
             state_value_model_optimizer.step()
 
+    def val_dataloader(self):
+        # Dataloader returning nothing, since the real logic happens in validation_step.
+        dataset = DatasetFromCallable(lambda: [0])
+        return DataLoader(dataset=dataset, batch_size=1)
+
     def validation_step(self, batch, batch_idx):
-        pass
+        self.policy_model.eval()
+        _, win_rates = play.play_n_games(
+            player_names=["model_chooser", "big_money_provinces_only"],
+            choosers=[
+                Chooser(strategies.combination_of_gaining_strategy_and_playing_strategy(
+                    gaining_strategy=strategies.pytorch_max_action_score_strategy(self.policy_model),
+                    playing_strategy=strategies.play_plus_actions_first)),
+                Chooser(strategies.big_money_provinces_only)],
+            n=50,
+            action_to_reward=ACTION_TO_REWARD)
+
+        self.val_epochs.append(self.current_epoch)
+        self.win_rate_metrics.append(win_rates["model_chooser"])
 
     def on_validation_epoch_end(self) -> None:
         pass
@@ -155,17 +175,20 @@ class PolicyGradientModel(L.LightningModule):
                                           betas=(0.9, 0.999),
                                           weight_decay=0)
             optimizers.append(state_value_model_optimizer)
-        return optimizers
-        # lr_scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer,
-        #                                                    max_lr=math.exp(-3),
-        #                                                    total_steps=MAX_EPOCHS,
-        #                                                    anneal_strategy='cos',
-        #                                                    cycle_momentum=True,
-        #                                                    base_momentum=0.85,
-        #                                                    max_momentum=0.95,
-        #                                                    div_factor=math.exp(1),
-        #                                                    final_div_factor=math.exp(1))
-        # return [policy_model_optimizer, state_value_model_optimizer]
+       #  policy_model_lr_scheduler = torch.optim.lr_scheduler.OneCycleLR(policy_model_optimizer,
+       #                                                                  max_lr=math.exp(-4),
+       #                                                                  total_steps=MAX_EPOCHS,
+       #                                                                  pct_start=0.5,
+       #                                                                  anneal_strategy='cos',
+       #                                                                  cycle_momentum=False,
+       #                                                                  base_momentum=0.9,
+       #                                                                  max_momentum=0.9,
+       #                                                                  div_factor=1,
+       #                                                                  final_div_factor=math.exp(1))
+
+       #  lr_schedulers = [policy_model_lr_scheduler]
+        lr_schedulers = []
+        return optimizers, lr_schedulers
 
 def get_policy_model():
     hidden_layer_width = 8
@@ -179,13 +202,17 @@ def get_policy_model():
     #     final_linear_layer,
     # )
     return torch.nn.Sequential(
-        RunningStatisticsNorm1d(NUM_INPUT_FEATURES, momentum=0.0001, affine=False),
+        RunningStatisticsNorm1d(NUM_INPUT_FEATURES, momentum=0.0001, affine=True),
         SumModules([
-            final_linear_layer,
+            torch.nn.Sequential(
+                final_linear_layer,
+                torch.nn.Dropout(0.1),
+            ),
             torch.nn.Sequential(
                 torch.nn.Linear(NUM_INPUT_FEATURES, hidden_layer_width, bias=True),
                 torch.nn.ReLU(),
                 torch.nn.Linear(hidden_layer_width, num_model_outputs, bias=False),
+                torch.nn.Dropout(0.1),
             ),
         ])
     )
@@ -209,25 +236,22 @@ def get_state_value_model():
 
     # return model
 
+def plot(x, y):
+    plt.plot(x, y, marker='o', linestyle='-', color='r')
+    plt.grid(True)
+    plt.show()
+
 def train_reinforce_model():
     policy_model = get_policy_model()
     state_value_model = get_state_value_model()
     wrapped_model = PolicyGradientModel(policy_model=policy_model,
                                         state_value_model=state_value_model,
-                                        entropy_loss_weight=0)
-    trainer = L.Trainer(max_epochs=MAX_EPOCHS)
+                                        entropy_loss_weight=0.0)
+    trainer = L.Trainer(max_epochs=MAX_EPOCHS, check_val_every_n_epoch=200)
     trainer.fit(model=wrapped_model)
 
-    policy_model.eval()
-    _, win_rates = play.play_n_games(
-        player_names=["model_chooser", "big_money_provinces_only"],
-        choosers=[
-            Chooser(strategies.combination_of_gaining_strategy_and_playing_strategy(
-                gaining_strategy=strategies.pytorch_max_action_score_strategy(policy_model),
-                playing_strategy=strategies.play_plus_actions_first)),
-            Chooser(strategies.big_money_provinces_only)],
-        n=50,
-        action_to_reward=ACTION_TO_REWARD)
+    print(f"policy_model.win_rate_metrics: {wrapped_model.win_rate_metrics}")
+    plot(x=wrapped_model.val_epochs, y=wrapped_model.win_rate_metrics)
 
     print("Actions taken by policy_model in sample games:")
     for i in range(10):
@@ -245,4 +269,3 @@ def train_reinforce_model():
             selected_choice = state_action_pair.possible_actions[state_action_pair.selected_action]
             print(selected_choice.action.get_description())
 
-    print(win_rates)

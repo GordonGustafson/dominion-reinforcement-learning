@@ -65,7 +65,8 @@ def make_player(hand=Multiset(),
 class TurnPhase(Enum):
     ACTION = "ACTION"
     TREASURE = "TREASURE"
-    BUY = "BUY"
+    FIRST_BUY = "FIRST_BUY"
+    NON_FIRST_BUY = "NON_FIRST_BUY"
     CLEANUP = "CLEANUP"
 
 _GameStateBase = NamedTuple("GameState", [

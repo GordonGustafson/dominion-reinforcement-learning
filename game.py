@@ -10,7 +10,7 @@ from cards import GameState, TurnPhase, move_specific_card_to_played_actions, mo
     non_current_player_indices, gain_card_by_player_index, take_top_card_off_of_deck, is_treasure_other_than_a_copper, \
     card_sequence_to_card_counts, add_card_counts, add_card, CARD_DICT, num_copies_of_card, \
     do_cleanup_phase, initial_game_state, get_total_player_vp, GameOutcome
-from actions import GainMostExpensiveCardAvailable, GainNothing, GainCardToHand, PlayActionCard, PlayNoActionCard, \
+from actions import GainMostExpensiveCardAvailable, GainNothingOnFirstBuy, GainNothingOnSecondOrLaterBuy, GainCardToHand, PlayActionCard, PlayNoActionCard, \
     DiscardCard, \
     DiscardCardToDrawACard, DontDiscardCardToDrawACard, PutCardFromDiscardPileOntoDeck, \
     PutNoCardFromDiscardPileOntoDeck, TrashCardFromHand, TrashNoCardFromHand, TrashRevealedCard, \
@@ -60,7 +60,7 @@ def treasure_phase_choices(treasure_game_state: GameState) -> List[Choice]:
     # We don't support treasure choices yet, so we always return only a single
     # choice of playing all your treasures.
     buy_game_state = treasure_game_state._replace(
-        turn_phase=TurnPhase.BUY,
+        turn_phase=TurnPhase.FIRST_BUY,
         total_money=(treasure_game_state.total_money
                      + money_from_treasures(treasure_game_state.current_player().hand)))
     return [Choice(game_state=buy_game_state, action=PlayAllTreasures())]
@@ -70,7 +70,7 @@ def treasure_phase_choices(treasure_game_state: GameState) -> List[Choice]:
 def buy_phase_choices(buy_game_state: GameState) -> List[Choice]:
     # Move to cleanup state if-and-only-if the player buys nothing OR if they
     # buy something with only 1 buy left.
-    turn_phase_after_one_buy = TurnPhase.BUY if buy_game_state.buys > 1 else TurnPhase.CLEANUP
+    turn_phase_after_one_buy = TurnPhase.NON_FIRST_BUY if buy_game_state.buys > 1 else TurnPhase.CLEANUP
     game_state_after_one_buy = buy_game_state._replace(turn_phase=turn_phase_after_one_buy,
                                                        buys=buy_game_state.buys-1)
 
@@ -81,7 +81,11 @@ def buy_phase_choices(buy_game_state: GameState) -> List[Choice]:
                                             pay_card_cost=True)
 
     cleanup_game_state = buy_game_state._replace(turn_phase=TurnPhase.CLEANUP)
-    buy_nothing = Choice(game_state=cleanup_game_state, action=GainNothing())
+    buy_nothing_action = {
+        TurnPhase.FIRST_BUY: GainNothingOnFirstBuy(),
+        TurnPhase.NON_FIRST_BUY: GainNothingOnSecondOrLaterBuy()
+    }[buy_game_state.turn_phase]
+    buy_nothing = Choice(game_state=cleanup_game_state, action=buy_nothing_action)
 
     return [buy_nothing] + buy_choices
 
@@ -157,7 +161,7 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
     elif effect.name == EffectName.GAIN_A_CARD_COSTING_UP_TO:
         gainable_cards = cards_in_supply_costing_less_than(game_state, effect.value)
         if len(gainable_cards) == 0:
-            single_choice = [Choice(game_state=game_state, action=GainNothing())]
+            single_choice = [Choice(game_state=game_state, action=GainNothingOnFirstBuy())]
             return offer_choice(game_state, single_choice, current_player_chooser, current_player_index)
         choices = gainable_cards_to_choices(game_state,
                                             gainable_cards,
@@ -168,13 +172,13 @@ def resolve_pending_effect(game_state: GameState, choosers: List) -> GameState:
                           in cards_in_supply_costing_less_than(game_state, effect.value)
                           if is_treasure(card)]
         if len(gainable_cards) == 0:
-            single_choice = [Choice(game_state=game_state, action=GainNothing())]
+            single_choice = [Choice(game_state=game_state, action=GainNothingOnFirstBuy())]
             return offer_choice(game_state, single_choice, current_player_chooser, current_player_index)
         choices = gainable_cards_to_hand_to_choices(game_state, gainable_cards)
         return offer_choice(game_state, choices, current_player_chooser, current_player_index)
     elif effect.name == EffectName.TRASH_GAIN_A_CARD_COSTING_UP_TO_X_MORE:
         if num_cards(hand) == 0:
-            single_choice = [Choice(game_state=game_state, action=GainNothing())]
+            single_choice = [Choice(game_state=game_state, action=GainNothingOnFirstBuy())]
             return offer_choice(game_state, single_choice, current_player_chooser, current_player_index)
 
         choices = []
@@ -324,7 +328,7 @@ def game_step(game_state: GameState, choosers: List) -> GameState:
     elif game_state.turn_phase == TurnPhase.TREASURE:
         choices = treasure_phase_choices(game_state)
         return offer_choice(game_state, choices, current_player_chooser, current_player_index)
-    elif game_state.turn_phase == TurnPhase.BUY:
+    elif game_state.turn_phase in [TurnPhase.FIRST_BUY, TurnPhase.NON_FIRST_BUY]:
         choices = buy_phase_choices(game_state)
         return offer_choice(game_state, choices, current_player_chooser, current_player_index)
     elif game_state.turn_phase == TurnPhase.CLEANUP:

@@ -20,11 +20,16 @@ class GainCardInsteadOfMoreExpensiveCard:
 
 
 @dataclass(frozen=True)
-class GainNothing:
+class GainNothingOnFirstBuy:
 
     def get_description(self) -> str:
         return f"gain nothing"
 
+@dataclass(frozen=True)
+class GainNothingOnSecondOrLaterBuy:
+
+    def get_description(self) -> str:
+        return f"gain nothing on second or later buy"
 
 @dataclass(frozen=True)
 class GainCardToHand:
@@ -179,7 +184,8 @@ _ACTION_TYPES_WITH_TREASURE_CARD_PARAMETER = [
 ]
 
 _ACTION_TYPES_WITHOUT_CARD_PARAMETER = [
-    GainNothing,
+    GainNothingOnFirstBuy,
+    GainNothingOnSecondOrLaterBuy,
     PlayNoActionCard,
 #    PutNoCardFromDiscardPileOntoDeck,
 #    TrashNoCardFromHand,

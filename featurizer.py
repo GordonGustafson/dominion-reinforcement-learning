@@ -68,6 +68,14 @@ def player_to_dict(player: Player, suffix: str) -> dict:
     all_player_cards = get_all_player_cards(player)
     return {
         "average_treasure_value" + suffix: get_average_treasure_value_per_card(player),
+        "num_vp" + suffix: get_total_player_vp(player),
+
+        "num_victory_cards_owned" + suffix: (
+                all_player_cards[card_name_to_card("estate")]
+                + all_player_cards[card_name_to_card("duchy")]
+                + all_player_cards[card_name_to_card("province")]
+                + all_player_cards[card_name_to_card("curse")]),
+
         "num_copper_owned" + suffix: all_player_cards[card_name_to_card("copper")],
         "num_silver_owned" + suffix: all_player_cards[card_name_to_card("silver")],
         "num_gold_owned" + suffix: all_player_cards[card_name_to_card("gold")],
@@ -76,4 +84,31 @@ def player_to_dict(player: Player, suffix: str) -> dict:
         "num_village_owned" + suffix: all_player_cards[card_name_to_card("village")],
         "num_festival_owned" + suffix: all_player_cards[card_name_to_card("festival")],
         "num_market_owned" + suffix: all_player_cards[card_name_to_card("market")],
+
+        "zero_copper_owned" + suffix: all_player_cards[card_name_to_card("copper")] == 0,
+        "zero_silver_owned" + suffix: all_player_cards[card_name_to_card("silver")] == 0,
+        "zero_gold_owned" + suffix: all_player_cards[card_name_to_card("gold")] == 0,
+        "zero_smithy_owned" + suffix: all_player_cards[card_name_to_card("smithy")] == 0,
+        "zero_laboratory_owned" + suffix: all_player_cards[card_name_to_card("laboratory")] == 0,
+        "zero_village_owned" + suffix: all_player_cards[card_name_to_card("village")] == 0,
+        "zero_festival_owned" + suffix: all_player_cards[card_name_to_card("festival")] == 0,
+        "zero_market_owned" + suffix: all_player_cards[card_name_to_card("market")] == 0,
+
+        "one_copper_owned" + suffix: all_player_cards[card_name_to_card("copper")] == 1,
+        "one_silver_owned" + suffix: all_player_cards[card_name_to_card("silver")] == 1,
+        "one_gold_owned" + suffix: all_player_cards[card_name_to_card("gold")] == 1,
+        "one_smithy_owned" + suffix: all_player_cards[card_name_to_card("smithy")] == 1,
+        "one_laboratory_owned" + suffix: all_player_cards[card_name_to_card("laboratory")] == 1,
+        "one_village_owned" + suffix: all_player_cards[card_name_to_card("village")] == 1,
+        "one_festival_owned" + suffix: all_player_cards[card_name_to_card("festival")] == 1,
+        "one_market_owned" + suffix: all_player_cards[card_name_to_card("market")] == 1,
+
+        "two_copper_owned" + suffix: all_player_cards[card_name_to_card("copper")] == 2,
+        "two_silver_owned" + suffix: all_player_cards[card_name_to_card("silver")] == 2,
+        "two_gold_owned" + suffix: all_player_cards[card_name_to_card("gold")] == 2,
+        "two_smithy_owned" + suffix: all_player_cards[card_name_to_card("smithy")] == 2,
+        "two_laboratory_owned" + suffix: all_player_cards[card_name_to_card("laboratory")] == 2,
+        "two_village_owned" + suffix: all_player_cards[card_name_to_card("village")] == 2,
+        "two_festival_owned" + suffix: all_player_cards[card_name_to_card("festival")] == 2,
+        "two_market_owned" + suffix: all_player_cards[card_name_to_card("market")] == 2,
     }

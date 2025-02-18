@@ -54,7 +54,7 @@ class TestCards(unittest.TestCase):
         self.assertNotEqual(game_state, different_discard)
 
     def test_buy_phase_choices(self):
-        buy_game_state = make_game_state(turn_phase=TurnPhase.BUY,
+        buy_game_state = make_game_state(turn_phase=TurnPhase.FIRST_BUY,
                                          supply=dict_to_card_counts({"copper": 1, "silver": 1, "gold": 1, "estate": 0, "duchy": 1, "province": 1}),
                                          total_money=5,
                                          buys=2,
@@ -65,7 +65,7 @@ class TestCards(unittest.TestCase):
         discard_pile = buy_game_state.current_player().discard_pile
         cleanup_game_state = buy_game_state._replace(turn_phase=TurnPhase.CLEANUP)
         expected_choices = [
-            Choice(cleanup_game_state, GainNothing()),
+            Choice(cleanup_game_state, GainNothingOnFirstBuy()),
             Choice(buy_game_state._replace(supply=remove_card_by_name(cleanup_game_state.supply, "copper"), total_money=5, buys=1).replace_current_player_kwargs(discard_pile=add_card_by_name(discard_pile, "copper")), GainMostExpensiveCardAvailable(card_name_to_card("copper"))),
             Choice(buy_game_state._replace(supply=remove_card_by_name(cleanup_game_state.supply, "silver"), total_money=2, buys=1).replace_current_player_kwargs(discard_pile=add_card_by_name(discard_pile, "silver")), GainMostExpensiveCardAvailable(card_name_to_card("silver"))),
             Choice(buy_game_state._replace(supply=remove_card_by_name(cleanup_game_state.supply, "duchy"), total_money=0, buys=1).replace_current_player_kwargs(discard_pile=add_card_by_name(discard_pile, "duchy")), GainMostExpensiveCardAvailable(card_name_to_card("duchy"))),
