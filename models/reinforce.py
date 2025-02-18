@@ -26,8 +26,7 @@ from pytorch.dataloader import tensorify_inputs, NUM_INPUT_FEATURES
 from pytorch.running_statistics_norm import RunningStatisticsNorm1d
 from pytorch.sum_modules import SumModules
 
-MAX_EPOCHS=1600
-MAX_EPOCHS=3200
+MAX_EPOCHS=6400
 VALIDATION_GAMES=50
 VP_REWARD_MULTIPLIER = 0.00
 ACTION_TO_REWARD = {}

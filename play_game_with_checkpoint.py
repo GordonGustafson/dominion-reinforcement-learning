@@ -19,5 +19,8 @@ model_chooser_function = strategies.combination_of_gaining_strategy_and_playing_
 games_df, win_rates = play.play_n_games(
     player_names=["model_chooser", "big_money_provinces_only"],
     choosers=[Chooser(model_chooser_function),
-              Chooser(strategies.big_money_provinces_only())],
-    n=50)
+              Chooser(strategies.big_money_provinces_only)],
+    n=1000)
+
+
+print(win_rates)
