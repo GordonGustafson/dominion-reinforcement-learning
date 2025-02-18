@@ -158,7 +158,7 @@ class PolicyGradientModel(L.LightningModule):
                     gaining_strategy=strategies.pytorch_max_action_score_strategy(self.policy_model),
                     playing_strategy=strategies.play_plus_actions_first)),
                 Chooser(strategies.big_money_provinces_only)],
-            n=1,
+            n=50,
             action_to_reward=ACTION_TO_REWARD)
 
         self.val_epochs.append(self.current_epoch)
