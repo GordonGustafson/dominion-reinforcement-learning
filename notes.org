@@ -58,6 +58,14 @@ OneCycleLR(policy_model_optimizer, max_lr=math.exp(-4), total_steps=MAX_EPOCHS, 
         "two_provinces_remaining",
         "one_province_remaining",
 
+*** various models, entropy_loss_weight=0, epsilon=0.0 softmax temperature: exp(7) scaling linearing to exp(0)
+**** 1 hidden layer with 16 nodes
+3200 games: [0.0, 0.0, 62.5, 70.5, 70.5, 71.5, 62.0, 61.5, 65.0, 80.0, 54.0, 27.5, 9.0, 1.5, 6.0, 7.0, 0.5] peak: 80.0
+
+*** various models, entropy_loss_weight=0, epsilon=0.0 softmax temperature: exp(7)
+**** 1 hidden layer with 16 nodes
+6400 games: [0.0, 0.0, 63.0, 72.0, 71.0, 68.0, 68.5, 71.0, 68.0, 62.5, 67.0, 63.5, 70.5, 68.0, 68.5, 73.5, 56.5, 53.0, 49.0, 51.5, 46.0, 48.5, 62.5, 60.5, 70.5, 80.0, 73.0, 75.5, 83.0, 74.0, 76.0, 71.5, 89.0] peak: 89.0
+
 *** various models, entropy_loss_weight=0, epsilon=0.0 softmax temperature: exp(5)
 **** 1 hidden layer with 16 nodes
 6400 games: [0.0, 28.5, 37.5, 38.5, 40.0, 35.0, 41.0, 34.5, 34.5, 44.5, 38.5, 36.5, 30.5, 37.5, 34.5, 39.5, 47.5, 46.5, 45.0, 43.0, 43.0, 45.0, 42.0, 49.0, 47.5, 44.5, 47.0, 45.0, 43.0, 41.0, 42.5, 44.5, 45.0] peak: 49.0

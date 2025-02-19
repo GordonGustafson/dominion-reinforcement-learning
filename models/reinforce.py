@@ -19,6 +19,7 @@ import play
 
 from torch.utils.data import IterableDataset
 
+import numpy as np
 import pandas as pd
 import featurizer
 
@@ -26,8 +27,8 @@ from pytorch.dataloader import tensorify_inputs, NUM_INPUT_FEATURES
 from pytorch.running_statistics_norm import RunningStatisticsNorm1d
 from pytorch.sum_modules import SumModules
 
-MAX_EPOCHS=6400
-VALIDATION_GAMES=50
+MAX_EPOCHS=3200
+VALIDATION_GAMES=100
 VP_REWARD_MULTIPLIER = 0.00
 ACTION_TO_REWARD = {}
 for card in CARD_LIST:
@@ -65,13 +66,21 @@ class PolicyGradientModel(L.LightningModule):
 
 
     def generate_batch(self):
+        max_temperature_exponent = 7
+        min_temperature_exponent = 0
+        temperature_exponent = np.interp(x=self.current_epoch,
+                                         xp=[0, MAX_EPOCHS-1],
+                                         fp=[max_temperature_exponent, min_temperature_exponent])
+        temperature = math.exp(temperature_exponent)
+
         chooser_function = strategies.combination_of_gaining_strategy_and_playing_strategy(
             gaining_strategy=strategies.wrap_with_epsilon_greedy(strategies.pytorch_sampled_action_strategy(self.policy_model,
-                                                                                                            temperature=math.exp(5)),
+                                                                                                            temperature=temperature),
                                                                  epsilon=0.0),
             playing_strategy=strategies.play_plus_actions_first)
         choosers = [Chooser(f) for f in [chooser_function] * 2]
-        _, _ = play.play_n_games(
+
+        game_df, _ = play.play_n_games(
             player_names=["model_1", "model_2"],
             choosers=choosers,
             n=1,
@@ -80,12 +89,6 @@ class PolicyGradientModel(L.LightningModule):
         #     print(tensor.max())
         #all_model_1_valid_action_probabilities = torch.stack(choosers[0].valid_action_probabilities, dim=0)
         #print(f"max action probabilities: {all_model_1_valid_action_probabilities.max(dim=1)}")
-        list_of_game_dfs = [featurizer.game_history_to_df(chooser.state_action_pairs,
-                                                          chooser.game_outcome,
-                                                          player_index,
-                                                          action_to_reward=ACTION_TO_REWARD)
-                            for player_index, chooser in enumerate(choosers)]
-        game_df = pd.concat(list_of_game_dfs, axis="index", ignore_index=True)
         state_features = tensorify_inputs(game_df)
         selected_action_probabilities = concat_zero_dimensional_tensors(choosers[0].action_probability_tensors +
                                                                         choosers[1].action_probability_tensors)
