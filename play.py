@@ -25,6 +25,10 @@ def play_game(player_names, choosers, action_to_reward: dict[Action, float] | No
                                                       player_index,
                                                       action_to_reward)
                         for player_index, chooser in enumerate(choosers)]
+    for chooser in choosers:
+        # Clear the state action pairs we just consumed
+        chooser.state_action_pairs = []
+
     game_df = pd.concat(list_of_game_dfs, axis="index", ignore_index=True)
     player_name_to_number_of_wins = {
         player_name: game_outcome_to_number_of_wins(chooser.game_outcome)

@@ -67,7 +67,7 @@ class PolicyGradientModel(L.LightningModule):
     def generate_batch(self):
         chooser_function = strategies.combination_of_gaining_strategy_and_playing_strategy(
             gaining_strategy=strategies.wrap_with_epsilon_greedy(strategies.pytorch_sampled_action_strategy(self.policy_model,
-                                                                                                            temperature=math.exp(3)),
+                                                                                                            temperature=math.exp(5)),
                                                                  epsilon=0.0),
             playing_strategy=strategies.play_plus_actions_first)
         choosers = [Chooser(f) for f in [chooser_function] * 2]

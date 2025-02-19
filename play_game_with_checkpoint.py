@@ -16,6 +16,23 @@ model_chooser_function = strategies.combination_of_gaining_strategy_and_playing_
     gaining_strategy=strategies.pytorch_max_action_score_strategy(policy_model),
     playing_strategy=strategies.play_plus_actions_first)
 
+
+print("Actions taken by policy_model in sample games:")
+for i in range(10):
+    choosers = [
+        Chooser(strategies.combination_of_gaining_strategy_and_playing_strategy(
+            gaining_strategy=strategies.pytorch_max_action_score_strategy(policy_model),
+            playing_strategy=strategies.play_plus_actions_first)),
+        Chooser(strategies.big_money_provinces_only)]
+    game_df, _ = play.play_n_games(
+        player_names=["model_chooser", "big_money_provinces_only"],
+        choosers=choosers,
+        n=1)
+    for state_action_pair in choosers[0].state_action_pairs:
+        selected_choice = state_action_pair.possible_actions[state_action_pair.selected_action]
+        print(selected_choice.action.get_description())
+
+
 games_df, win_rates = play.play_n_games(
     player_names=["model_chooser", "big_money_provinces_only"],
     choosers=[Chooser(model_chooser_function),
