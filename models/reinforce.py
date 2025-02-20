@@ -27,7 +27,7 @@ from pytorch.dataloader import tensorify_inputs, NUM_INPUT_FEATURES
 from pytorch.running_statistics_norm import RunningStatisticsNorm1d
 from pytorch.sum_modules import SumModules
 
-MAX_EPOCHS=3200
+MAX_EPOCHS=800
 VALIDATION_GAMES=100
 VP_REWARD_MULTIPLIER = 0.00
 ACTION_TO_REWARD = {}
@@ -66,12 +66,11 @@ class PolicyGradientModel(L.LightningModule):
 
 
     def generate_batch(self):
-        max_temperature_exponent = 7
-        min_temperature_exponent = 0
-        temperature_exponent = np.interp(x=self.current_epoch,
+        max_temperature = math.exp(7)
+        min_temperature = math.exp(0)
+        temperature = np.interp(x=self.current_epoch,
                                          xp=[0, MAX_EPOCHS-1],
-                                         fp=[max_temperature_exponent, min_temperature_exponent])
-        temperature = math.exp(temperature_exponent)
+                                         fp=[max_temperature, min_temperature])
 
         chooser_function = strategies.combination_of_gaining_strategy_and_playing_strategy(
             gaining_strategy=strategies.wrap_with_epsilon_greedy(strategies.pytorch_sampled_action_strategy(self.policy_model,
@@ -189,21 +188,24 @@ class PolicyGradientModel(L.LightningModule):
         optimizers = [policy_model_optimizer]
         if self.state_value_model is not None:
             state_value_model_optimizer = torch.optim.AdamW(self.state_value_model.parameters(),
-                                          lr=math.exp(-5),
+                                          lr=math.exp(-4),
                                           betas=(0.9, 0.999),
                                           weight_decay=0)
             optimizers.append(state_value_model_optimizer)
-        policy_model_lr_scheduler = torch.optim.lr_scheduler.OneCycleLR(policy_model_optimizer,
-                                                                        max_lr=math.exp(-4),
-                                                                        total_steps=MAX_EPOCHS,
-                                                                        pct_start=0.3,
-                                                                        anneal_strategy='cos',
-                                                                        cycle_momentum=False,
-                                                                        base_momentum=0.9,
-                                                                        max_momentum=0.9,
-                                                                        div_factor=1,
-                                                                        final_div_factor=math.exp(1))
-
+        # policy_model_lr_scheduler = torch.optim.lr_scheduler.OneCycleLR(policy_model_optimizer,
+        #                                                                 max_lr=math.exp(-4),
+        #                                                                 total_steps=MAX_EPOCHS,
+        #                                                                 pct_start=0.3,
+        #                                                                 anneal_strategy='cos',
+        #                                                                 cycle_momentum=False,
+        #                                                                 base_momentum=0.9,
+        #                                                                 max_momentum=0.9,
+        #                                                                 div_factor=1,
+        #                                                                 final_div_factor=math.exp(1))
+        policy_model_lr_scheduler = torch.optim.lr_scheduler.LinearLR(policy_model_optimizer,
+                                                                      start_factor=math.exp(0),
+                                                                      end_factor=math.exp(7),
+                                                                      total_iters=MAX_EPOCHS)
         lr_schedulers = [policy_model_lr_scheduler]
         # lr_schedulers = []
         return optimizers, lr_schedulers
@@ -262,7 +264,7 @@ def train_reinforce_model(output_path: Path):
                                         state_value_model=state_value_model,
                                         entropy_loss_weight=0.0,
                                         output_path=output_path)
-    trainer = L.Trainer(max_epochs=MAX_EPOCHS, check_val_every_n_epoch=200)
+    trainer = L.Trainer(max_epochs=MAX_EPOCHS, check_val_every_n_epoch=400)
     trainer.fit(model=wrapped_model)
 
     print(f"policy_model.win_rate_metrics: {MAX_EPOCHS} games: {wrapped_model.win_rate_metrics} peak: {max(wrapped_model.win_rate_metrics)}")

@@ -12,10 +12,15 @@ nonparametric model - no assumption about the distribution of the parameter
 laptop: 17.5 minutes
 desktop: 5 minutes
 
-* best model so far
+* best models so far
+** entropy_loss_weight=0, epsilon=0.0 softmax temperature: exp(3)
 {'model_chooser': 909.5, 'big_money_provinces_only': 90.5}
 1 hidden layer with 16 nodes
-entropy_loss_weight=0, epsilon=0.0 softmax temperature: exp(3)
+OneCycleLR(policy_model_optimizer, max_lr=math.exp(-4), total_steps=MAX_EPOCHS, pct_start=0.3, anneal_strategy='cos', cycle_momentum=False, base_momentum=0.9, max_momentum=0.9, div_factor=1, final_div_factor=math.exp(1))
+
+** entropy_loss_weight=0, epsilon=0.0 softmax temperature: exp(5)
+{'model_chooser': 903.0, 'big_money_provinces_only': 97.0}
+1 hidden layer with 16 nodes
 OneCycleLR(policy_model_optimizer, max_lr=math.exp(-4), total_steps=MAX_EPOCHS, pct_start=0.3, anneal_strategy='cos', cycle_momentum=False, base_momentum=0.9, max_momentum=0.9, div_factor=1, final_div_factor=math.exp(1))
 
 
@@ -161,7 +166,7 @@ observation:
 ***** no lr scheduler, RunningStatisticsNorm1d(affine=True), softmax temperature: exp(8)
 1600 games: [0.0, 0.0, 2.5, 26.0, 35.0, 37.0, 36.0, 35.5, 33.5] peak: 37.0
 
-***** no lr scheduler, RunningStatisticsNorm1d(affine=True), softmax temperature: exp(12)
+***** no lr scheduler, RunningStatisticsNorm1d(affine=True), softmax temperature: exp(12) = 162754
 1600 games: [0.0, 0.0, 0.0, 0.0, 8.0, 15.0, 34.0, 38.5, 38.0] peak: 38.5
 
         
