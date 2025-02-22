@@ -27,7 +27,7 @@ from pytorch.dataloader import tensorify_inputs, NUM_INPUT_FEATURES
 from pytorch.running_statistics_norm import RunningStatisticsNorm1d
 from pytorch.sum_modules import SumModules
 
-MAX_EPOCHS=800
+MAX_EPOCHS=3200
 VALIDATION_GAMES=100
 VP_REWARD_MULTIPLIER = 0.00
 ACTION_TO_REWARD = {}
@@ -66,11 +66,12 @@ class PolicyGradientModel(L.LightningModule):
 
 
     def generate_batch(self):
-        max_temperature = math.exp(7)
-        min_temperature = math.exp(0)
+        max_temperature = math.exp(5)
+        min_temperature = math.exp(5)
         temperature = np.interp(x=self.current_epoch,
                                          xp=[0, MAX_EPOCHS-1],
                                          fp=[max_temperature, min_temperature])
+        print(f"temperature: {temperature}")
 
         chooser_function = strategies.combination_of_gaining_strategy_and_playing_strategy(
             gaining_strategy=strategies.wrap_with_epsilon_greedy(strategies.pytorch_sampled_action_strategy(self.policy_model,
@@ -88,6 +89,7 @@ class PolicyGradientModel(L.LightningModule):
         #     print(tensor.max())
         #all_model_1_valid_action_probabilities = torch.stack(choosers[0].valid_action_probabilities, dim=0)
         #print(f"max action probabilities: {all_model_1_valid_action_probabilities.max(dim=1)}")
+        print(choosers[0].action_probability_tensors)
         state_features = tensorify_inputs(game_df)
         selected_action_probabilities = concat_zero_dimensional_tensors(choosers[0].action_probability_tensors +
                                                                         choosers[1].action_probability_tensors)
@@ -192,20 +194,20 @@ class PolicyGradientModel(L.LightningModule):
                                           betas=(0.9, 0.999),
                                           weight_decay=0)
             optimizers.append(state_value_model_optimizer)
-        # policy_model_lr_scheduler = torch.optim.lr_scheduler.OneCycleLR(policy_model_optimizer,
-        #                                                                 max_lr=math.exp(-4),
-        #                                                                 total_steps=MAX_EPOCHS,
-        #                                                                 pct_start=0.3,
-        #                                                                 anneal_strategy='cos',
-        #                                                                 cycle_momentum=False,
-        #                                                                 base_momentum=0.9,
-        #                                                                 max_momentum=0.9,
-        #                                                                 div_factor=1,
-        #                                                                 final_div_factor=math.exp(1))
-        policy_model_lr_scheduler = torch.optim.lr_scheduler.LinearLR(policy_model_optimizer,
-                                                                      start_factor=math.exp(0),
-                                                                      end_factor=math.exp(7),
-                                                                      total_iters=MAX_EPOCHS)
+        policy_model_lr_scheduler = torch.optim.lr_scheduler.OneCycleLR(policy_model_optimizer,
+                                                                        max_lr=math.exp(-4),
+                                                                        total_steps=MAX_EPOCHS,
+                                                                        pct_start=0.3,
+                                                                        anneal_strategy='cos',
+                                                                        cycle_momentum=False,
+                                                                        base_momentum=0.9,
+                                                                        max_momentum=0.9,
+                                                                        div_factor=1,
+                                                                        final_div_factor=math.exp(1))
+        # policy_model_lr_scheduler = torch.optim.lr_scheduler.LinearLR(policy_model_optimizer,
+        #                                                               start_factor=math.exp(0),
+        #                                                               end_factor=math.exp(7),
+        #                                                               total_iters=MAX_EPOCHS)
         lr_schedulers = [policy_model_lr_scheduler]
         # lr_schedulers = []
         return optimizers, lr_schedulers
