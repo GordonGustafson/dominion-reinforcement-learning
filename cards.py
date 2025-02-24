@@ -210,6 +210,15 @@ def card_id_to_card(card_id: CardId) -> Card:
 def card_to_card_id(card: Card) -> CardId:
     return CARD_LIST.index(card)
 
+def action_cards_with_plus_n_actions(n: int) -> List[Card]:
+    action_cards = [card for card in CARD_LIST if len(card.action_effects) > 0]
+
+    if n == 0:
+        return [card for card in action_cards
+                if not any(effect.name == EffectName.PLUS_ACTIONS for effect in card.action_effects)]
+
+    return [card for card in action_cards if Effect(EffectName.PLUS_ACTIONS, n) in card.action_effects]
+
 
 def empty_card_counts():
     return Multiset()

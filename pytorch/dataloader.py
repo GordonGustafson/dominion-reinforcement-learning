@@ -5,7 +5,7 @@ from cards import card_name_to_card, CARD_LIST
 
 import torch
 
-NUM_INPUT_FEATURES = 19
+NUM_INPUT_FEATURES = 22
 
 class DominionDataset(Dataset):
     def __init__(self, dataframe: pd.DataFrame) -> None:
@@ -37,6 +37,9 @@ def tensorify_inputs(df: pd.DataFrame) -> torch.tensor:
         "num_vp_self",
         "average_treasure_value_self",
         "num_victory_cards_owned_self",
+        "num_actions_owned_with_plus_zero_actions_self",
+        "num_actions_owned_with_plus_one_action_self",
+        "num_actions_owned_with_plus_two_actions_self",
     ] + num_card_owned_feature_names
 
     return torch.tensor(df[feature_names].to_numpy().reshape((-1, NUM_INPUT_FEATURES)))

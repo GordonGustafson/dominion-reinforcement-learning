@@ -76,7 +76,12 @@ def player_to_dict(player: Player, suffix: str) -> dict:
                 + all_player_cards[card_name_to_card("duchy")]
                 + all_player_cards[card_name_to_card("province")]
                 + all_player_cards[card_name_to_card("curse")]),
-        }
+
+        "num_actions_owned_with_plus_zero_actions" + suffix: sum(all_player_cards[card] for card in action_cards_with_plus_n_actions(0)),
+        "num_actions_owned_with_plus_one_action" + suffix: sum(all_player_cards[card] for card in action_cards_with_plus_n_actions(1)),
+        "num_actions_owned_with_plus_two_actions" + suffix: sum(all_player_cards[card] for card in action_cards_with_plus_n_actions(2)),
+    }
+
 
     for card in CARD_LIST:
         result[f"num_{card.name}_owned" + suffix] = all_player_cards[card]
