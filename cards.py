@@ -160,7 +160,7 @@ CARD_LIST = [
 #                                                     Effect(EffectName.MAY_TRASH_A_CARD_FROM_YOUR_HAND, None))),
 #
 #    # gaining cards
-#    make_card(name="workshop", cost=3, action_effects=(Effect(EffectName.GAIN_A_CARD_COSTING_UP_TO, 4),)),
+     make_card(name="workshop", cost=3, action_effects=(Effect(EffectName.GAIN_A_CARD_COSTING_UP_TO, 4),)),
 #    make_card(name="remodel", cost=4, action_effects=(Effect(EffectName.TRASH_GAIN_A_CARD_COSTING_UP_TO_X_MORE, 2),)),
 #    make_card(name="mine", cost=5, action_effects=(Effect(EffectName.MAY_TRASH_TREASURE_GAIN_TREASURE_TO_HAND_COSTING_UP_TO_X_MORE, 3),)),
 #
@@ -180,11 +180,11 @@ CARD_LIST = [
 #    # {"name": "Gardens",      "cost": 4, "type": "victory", @"worth 1 vp per 10 cards you have (rounded down)"
 #
 #    # attacks
-#    make_card(name="council room", cost=5, action_effects=(Effect(EffectName.DRAW_CARDS, 4),
-#                                                           Effect(EffectName.PLUS_BUYS, 1),
-#                                                           Effect(EffectName.EACH_OTHER_PLAYER_DRAWS_A_CARD, None))),
-#    make_card(name="witch", cost=5, action_effects=(Effect(EffectName.DRAW_CARDS, 2),
-#                                                    Effect(EffectName.EACH_OTHER_PLAYER_GAINS_A_CURSE, None))),
+     make_card(name="council room", cost=5, action_effects=(Effect(EffectName.DRAW_CARDS, 4),
+                                                            Effect(EffectName.PLUS_BUYS, 1),
+                                                            Effect(EffectName.EACH_OTHER_PLAYER_DRAWS_A_CARD, None))),
+     make_card(name="witch", cost=5, action_effects=(Effect(EffectName.DRAW_CARDS, 2),
+                                                     Effect(EffectName.EACH_OTHER_PLAYER_GAINS_A_CURSE, None))),
 #    make_card(name="militia", cost=4, action_effects=(Effect(EffectName.PRODUCE_MONEY, 2),
 #                                                      Effect(EffectName.EACH_OTHER_PLAYER_DISCARDS_DOWN_TO, 3))),
 #    make_card(name="bandit", cost=5, action_effects=(Effect(EffectName.GAIN_A_GOLD, None),
@@ -385,7 +385,7 @@ def draw_cards_current_player(game_state: GameState, num_cards_to_draw: int) -> 
 
 def gain_card_by_player_index(game_state: GameState, card: Card, index: int) -> GameState:
     if game_state.supply[card] <= 0:
-        print(f"Player index {index} not gaining {card.name} because its supply pile is empty")
+        # print(f"Player index {index} not gaining {card.name} because its supply pile is empty")
         return game_state
 
     player_at_index = game_state.players[index]
@@ -399,7 +399,7 @@ def gain_card_current_player(game_state: GameState, card: Card) -> GameState:
 
 def gain_card_to_hand_current_player(game_state: GameState, card: Card) -> GameState:
     if game_state.supply[card] <= 0:
-        print(f"Current player not gaining {card.name} to hand because its supply pile is empty")
+        # print(f"Current player not gaining {card.name} to hand because its supply pile is empty")
         return game_state
 
     return (game_state
@@ -508,14 +508,14 @@ def initial_supply(num_players: int) -> Dict[str, int]:
     card_dict["festival"] = 10
     card_dict["market"] = 10
     # card_dict["chapel"] = 10
-    # card_dict["workshop"] = 10
+    card_dict["workshop"] = 10
     # card_dict["remodel"] = 10
     # card_dict["mine"] = 10
     # card_dict["cellar"] = 10
     # card_dict["harbinger"] = 10
     # card_dict["moneylender"] = 10
-    # card_dict["council room"] = 10
-    # card_dict["witch"] = 10
+    card_dict["council room"] = 10
+    card_dict["witch"] = 10
     # card_dict["militia"] = 10
     # card_dict["bandit"] = 10
     return card_dict

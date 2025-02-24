@@ -114,12 +114,15 @@ def combination_of_gaining_strategy_and_playing_strategy(gaining_strategy: Choos
 def play_plus_actions_first(chooser: Chooser, game_state: GameState, choices: List[Choice], player_index: int):
     possible_actions = [choice.action for choice in choices]
     action_to_score = {
-        PlayNoActionCard(): -1,
-        PlayActionCard(card_name_to_card("smithy")): 0,
-        PlayActionCard(card_name_to_card("market")): 1,
-        PlayActionCard(card_name_to_card("laboratory")): 1,
-        PlayActionCard(card_name_to_card("festival")): 2,
-        PlayActionCard(card_name_to_card("village")): 2,
+        PlayNoActionCard(): -10,
+        PlayActionCard(card_name_to_card("workshop")): 3,
+        PlayActionCard(card_name_to_card("smithy")): 4,
+        PlayActionCard(card_name_to_card("council room")): 5,
+        PlayActionCard(card_name_to_card("witch")): 9 if game_state.supply[card_name_to_card("curse")] > 0 else 2,
+        PlayActionCard(card_name_to_card("market")): 10,
+        PlayActionCard(card_name_to_card("laboratory")): 10,
+        PlayActionCard(card_name_to_card("festival")): 20,
+        PlayActionCard(card_name_to_card("village")): 20,
     }
     possible_action_scores = [action_to_score[action] for action in possible_actions]
     return possible_action_scores.index(max(possible_action_scores))

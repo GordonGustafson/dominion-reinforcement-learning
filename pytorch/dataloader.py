@@ -1,9 +1,11 @@
 import pandas as pd
 from torch.utils.data import Dataset
 
+from cards import card_name_to_card, CARD_LIST
+
 import torch
 
-NUM_INPUT_FEATURES = 16
+NUM_INPUT_FEATURES = 19
 
 class DominionDataset(Dataset):
     def __init__(self, dataframe: pd.DataFrame) -> None:
@@ -22,53 +24,22 @@ class DominionDataset(Dataset):
 def tensorify_inputs(df: pd.DataFrame) -> torch.tensor:
     # Index the DF to make sure the columns show up in the right order? I'm not sure how this is typically done.
     # TODO: Why is the shape 1-dimensional here until I manually reshape it?
-    return torch.tensor(df[[
-        "player_vp_lead",
-        "num_provinces_remaining",
-        "average_treasure_value_self",
-        "num_vp_self",
-        "num_victory_cards_owned_self",
-        "num_copper_owned_self",
-        "num_silver_owned_self",
-        "num_gold_owned_self",
-        "num_smithy_owned_self",
-        "num_laboratory_owned_self",
-        "num_village_owned_self",
-        "num_festival_owned_self",
-        "num_market_owned_self",
-        #"average_treasure_value_opponent",
+
+    exclude_num_card_owned = {card_name_to_card(card_name) for card_name in ["estate", "duchy", "province", "curse"]}
+    num_card_owned_feature_names = [f"num_{card.name}_owned_self" for card in sorted(set(CARD_LIST) - exclude_num_card_owned)]
+
+    feature_names = [
         "max_turns_per_player",
+        "num_provinces_remaining",
         "two_provinces_remaining",
         "one_province_remaining",
+        "player_vp_lead",
+        "num_vp_self",
+        "average_treasure_value_self",
+        "num_victory_cards_owned_self",
+    ] + num_card_owned_feature_names
 
-        # "zero_copper_owned_self",
-        # "zero_silver_owned_self",
-        # "zero_gold_owned_self",
-        # "zero_smithy_owned_self",
-        # "zero_laboratory_owned_self",
-        # "zero_village_owned_self",
-        # "zero_festival_owned_self",
-        # "zero_market_owned_self",
-
-        # "one_copper_owned_self",
-        # "one_silver_owned_self",
-        # "one_gold_owned_self",
-        # "one_smithy_owned_self",
-        # "one_laboratory_owned_self",
-        # "one_village_owned_self",
-        # "one_festival_owned_self",
-        # "one_market_owned_self",
-
-        # "two_copper_owned_self",
-        # "two_silver_owned_self",
-        # "two_gold_owned_self",
-        # "two_smithy_owned_self",
-        # "two_laboratory_owned_self",
-        # "two_village_owned_self",
-        # "two_festival_owned_self",
-        # "two_market_owned_self",
-
-    ]].to_numpy().reshape((-1, NUM_INPUT_FEATURES)))
+    return torch.tensor(df[feature_names].to_numpy().reshape((-1, NUM_INPUT_FEATURES)))
 
 def tensorify_reward(df: pd.DataFrame) -> torch.tensor:
     return torch.tensor(df[["reward"]].to_numpy().squeeze())
