@@ -7,6 +7,9 @@ import torch
 
 NUM_INPUT_FEATURES = 22
 
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+
 class DominionDataset(Dataset):
     def __init__(self, dataframe: pd.DataFrame) -> None:
         self.feature_dataframe = dataframe.drop(columns=["reward"])
@@ -42,7 +45,7 @@ def tensorify_inputs(df: pd.DataFrame) -> torch.tensor:
         "num_actions_owned_with_plus_two_actions_self",
     ] + num_card_owned_feature_names
 
-    return torch.tensor(df[feature_names].to_numpy().reshape((-1, NUM_INPUT_FEATURES)))
+    return torch.tensor(df[feature_names].to_numpy().reshape((-1, NUM_INPUT_FEATURES)), device=device)
 
 def tensorify_reward(df: pd.DataFrame) -> torch.tensor:
     return torch.tensor(df[["reward"]].to_numpy().squeeze())

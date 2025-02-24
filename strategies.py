@@ -71,7 +71,8 @@ def pytorch_sampled_action_strategy(pytorch_model, temperature: float) -> Choose
             tensorify_inputs(featurizer.game_state_to_df(game_state, player_index)))
         action_scores = action_scores.squeeze()
         valid_action_ids = [action_to_action_id(choice.action) for choice in choices]
-        choice_scores = torch.index_select(input=action_scores, dim=0, index=torch.tensor(valid_action_ids))
+        index = torch.tensor(valid_action_ids, device=action_scores.device)
+        choice_scores = torch.index_select(input=action_scores, dim=0, index=index)
         # print(f"choice scores: {choice_scores}")
         action_probabilities = torch.nn.functional.softmax(choice_scores / temperature, dim=0)
         # print(f"action_probabilities: {action_probabilities}")
