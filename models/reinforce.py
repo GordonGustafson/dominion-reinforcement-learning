@@ -27,7 +27,7 @@ from pytorch.dataloader import tensorify_inputs, NUM_INPUT_FEATURES
 from pytorch.running_statistics_norm import RunningStatisticsNorm1d
 from pytorch.sum_modules import SumModules
 
-MAX_EPOCHS=3200
+MAX_EPOCHS=12800
 VALIDATION_GAMES=100
 VP_REWARD_MULTIPLIER = 0.00
 ACTION_TO_REWARD = {}
@@ -184,7 +184,7 @@ class PolicyGradientModel(L.LightningModule):
     def configure_optimizers(self):
         policy_model_optimizer = torch.optim.AdamW(self.policy_model.parameters(),
                                       # math.exp(-2) too large, math.exp(-6) too small
-                                      lr=math.exp(-4),
+                                      lr=math.exp(-6),
                                       betas=(0.9, 0.999),
                                       weight_decay=0)
         optimizers = [policy_model_optimizer]
@@ -194,22 +194,22 @@ class PolicyGradientModel(L.LightningModule):
                                           betas=(0.9, 0.999),
                                           weight_decay=0)
             optimizers.append(state_value_model_optimizer)
-        policy_model_lr_scheduler = torch.optim.lr_scheduler.OneCycleLR(policy_model_optimizer,
-                                                                        max_lr=math.exp(-4),
-                                                                        total_steps=MAX_EPOCHS,
-                                                                        pct_start=0.3,
-                                                                        anneal_strategy='cos',
-                                                                        cycle_momentum=False,
-                                                                        base_momentum=0.9,
-                                                                        max_momentum=0.9,
-                                                                        div_factor=1,
-                                                                        final_div_factor=math.exp(1))
+        # policy_model_lr_scheduler = torch.optim.lr_scheduler.OneCycleLR(policy_model_optimizer,
+        #                                                                 max_lr=math.exp(-4),
+        #                                                                 total_steps=MAX_EPOCHS,
+        #                                                                 pct_start=0.3,
+        #                                                                 anneal_strategy='cos',
+        #                                                                 cycle_momentum=False,
+        #                                                                 base_momentum=0.9,
+        #                                                                 max_momentum=0.9,
+        #                                                                 div_factor=1,
+        #                                                                 final_div_factor=math.exp(1))
         # policy_model_lr_scheduler = torch.optim.lr_scheduler.LinearLR(policy_model_optimizer,
         #                                                               start_factor=math.exp(0),
         #                                                               end_factor=math.exp(7),
         #                                                               total_iters=MAX_EPOCHS)
-        lr_schedulers = [policy_model_lr_scheduler]
-        # lr_schedulers = []
+        # lr_schedulers = [policy_model_lr_scheduler]
+        lr_schedulers = []
         return optimizers, lr_schedulers
 
 def get_policy_model():
@@ -264,7 +264,7 @@ def train_reinforce_model(output_path: Path):
     state_value_model = get_state_value_model()
     wrapped_model = PolicyGradientModel(policy_model=policy_model,
                                         state_value_model=state_value_model,
-                                        entropy_loss_weight=0.0,
+                                        entropy_loss_weight=math.exp(-4),
                                         output_path=output_path)
     trainer = L.Trainer(max_epochs=MAX_EPOCHS, check_val_every_n_epoch=400)
     trainer.fit(model=wrapped_model)

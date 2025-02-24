@@ -4,26 +4,42 @@ parametric models - assume a priori the distribution of each parameter
 nonparametric model - no assumption about the distribution of the parameter
 
 * TODO PPO
-* TODO entropy regularization over all actions, not just eligible ones.
-* TODO two different models training against each other?
+* TODO buylist bots
+* TODO new features
+total money owned
+gains to end game
+* TODO try out Provincial
 
+* papers
+https://arxiv.org/html/2405.06846v1
+https://ojs.aaai.org/index.php/AIIDE/article/download/27518/27291/31569
+https://scholar.rose-hulman.edu/rhumj/vol25/iss1/2/
+
+* is village smithy better than smithy only?
+https://tongfamily.com/2014/12/24/dominion-strategy/
+
+* other simulators
+https://github.com/rspeer/dominiate
+https://github.com/Geronimoo/DominionSim/tree/master
 
 * 1600 games with eval every 200 games
 laptop: 17.5 minutes
 desktop: 5 minutes
 
 * best models so far
-** entropy_loss_weight=0, epsilon=0.0 softmax temperature: exp(3)
+** entropy_loss_weight=0, epsilon=0.0 softmax temperature: exp(5), lr=exp(-6)
+6400 games, checkpoint from last epoch
+{'model_chooser': 915.5, 'big_money_provinces_only': 84.5}
+
+** entropy_loss_weight=0, epsilon=0.0 softmax temperature: exp(3), lr=exp(-4)
 {'model_chooser': 909.5, 'big_money_provinces_only': 90.5}
 1 hidden layer with 16 nodes
 OneCycleLR(policy_model_optimizer, max_lr=math.exp(-4), total_steps=MAX_EPOCHS, pct_start=0.3, anneal_strategy='cos', cycle_momentum=False, base_momentum=0.9, max_momentum=0.9, div_factor=1, final_div_factor=math.exp(1))
 
-** entropy_loss_weight=0, epsilon=0.0 softmax temperature: exp(5)
+** entropy_loss_weight=0, epsilon=0.0 softmax temperature: exp(5), lr=exp(-4)
 {'model_chooser': 903.0, 'big_money_provinces_only': 97.0}
 1 hidden layer with 16 nodes
 OneCycleLR(policy_model_optimizer, max_lr=math.exp(-4), total_steps=MAX_EPOCHS, pct_start=0.3, anneal_strategy='cos', cycle_momentum=False, base_momentum=0.9, max_momentum=0.9, div_factor=1, final_div_factor=math.exp(1))
-
-
 
 
 * REINFORCE with kingdom cards
@@ -62,6 +78,82 @@ OneCycleLR(policy_model_optimizer, max_lr=math.exp(-4), total_steps=MAX_EPOCHS, 
         "max_turns_per_player",
         "two_provinces_remaining",
         "one_province_remaining",
+
+*** various models, epsilon=0.0, temperature=exp(5), loss NOT multiplied by temperature, Adam(0.9, 0.999), entropy_loss_weight=exp(-4), lr=exp(-6)
+**** 1 hidden layer with 32 nodes
+12800 games: [0.0, 0.0, 19.0, 70.0, 63.0, 68.5, 79.5, 84.0, 83.0, 85.5, 85.5, 87.0, 89.5, 87.5, 95.5, 90.0, 85.0, 85.0, 90.0, 93.5, 92.5, 91.5, 90.0, 88.5, 90.5, 93.0, 90.5, 88.0, 88.5, 92.5, 88.5, 97.0, 91.0] peak: 97.0
+epoch=12799-win_percentage=0.91.ckpt {'model_chooser': 913.5, 'big_money_provinces_only': 86.5}
+
+**** 2 hidden layers with 32 nodes
+12800 games: [0.0, 0.0, 77.0, 79.0, 83.0, 84.0, 90.5, 78.0, 90.0, 94.0, 83.5, 81.0, 85.0, 80.0, 96.5, 88.0, 84.0, 85.0, 77.5, 90.5, 89.5, 81.5, 93.0, 90.0, 92.0, 88.5, 82.0, 89.5, 86.0, 85.5, 90.0, 82.5, 88.5] peak: 96.5
+epoch=12799-win_percentage=0.885.ckpt {'model_chooser': 904.5, 'big_money_provinces_only': 95.5}
+
+**** 2 hidden layers with 16 nodes
+12800 games: [0.0, 0.0, 72.0, 66.0, 70.5, 72.5, 85.5, 81.0, 85.0, 92.0, 88.0, 91.0, 78.5, 87.5, 90.0, 95.0, 92.5, 87.5, 94.5, 86.5, 86.5, 92.5, 90.5, 89.0, 91.0, 94.5, 90.5, 90.5, 87.5, 95.5, 95.5, 82.5, 92.0] peak: 95.5
+epoch=12799-win_percentage=0.92.ckpt {'model_chooser': 921.5, 'big_money_provinces_only': 78.5}
+^ only action card it buys is smithy
+
+**** 3 hidden layers with 16 nodes
+12800 games: [0.0, 71.5, 69.5, 65.5, 68.0, 61.5, 60.5, 81.5, 87.0, 79.5, 87.0, 81.5, 90.0, 87.0, 83.0, 83.5, 86.5, 89.0, 89.0, 92.5, 93.0, 89.5, 87.0, 87.0, 90.0, 96.5, 89.5, 88.5, 91.5, 92.5, 90.0, 95.5, 86.5] peak: 96.5
+epoch=12799-win_percentage=0.865.ckpt {'model_chooser': 890.0, 'big_money_provinces_only': 110.0}
+
+**** 1 hidden layer with 16 nodes Sigmoid instead of ReLU
+12800 games: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.5, 0.5, 6.0, 12.5, 9.0, 16.5, 34.5, 63.0, 68.0, 68.5, 61.5, 58.5, 71.5, 69.5, 67.0, 69.0, 69.0, 70.5, 73.0, 71.0, 73.5] peak: 73.5
+
+**** 1 hidden layer with 16 nodes Tanh instead of ReLU
+12800 games: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.5, 4.5, 21.0, 30.5, 28.0, 31.5, 56.0, 59.5, 62.5, 60.0, 59.5, 69.0, 77.5, 80.0, 79.5, 76.5, 68.0, 75.0, 70.5, 72.5] peak: 80.0
+
+
+
+
+*** 1 hidden layer with 16 nodes, epsilon=0.0, temperature=exp(5), loss NOT multiplied by temperature, Adam(0.9, 0.999)
+No LR Scheduler
+**** entropy_loss_weight=0, lr=exp(-5)
+6400 games: [0.5, 0.0, 67.0, 70.5, 73.5, 83.0, 89.5, 84.0, 78.0, 84.5, 88.0, 82.0, 84.5, 87.5, 85.0, 87.5, 89.0] peak: 89.5
+
+**** entropy_loss_weight=0, lr=exp(-6)
+6400 games: [0.0, 0.0, 22.5, 29.0, 23.5, 30.0, 70.0, 77.5, 84.5, 82.0, 88.5, 84.0, 76.5, 82.5, 86.5, 82.5, 90.5] peak: 90.5
+last checkpoint: {'model_chooser': 915.5, 'big_money_provinces_only': 84.5}
+
+**** entropy_loss_weight=0, lr=exp(-7) 
+6400 games: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 69.5, 70.5, 78.0, 82.0, 65.5, 73.5, 68.0, 73.0, 83.0, 80.5, 82.5] peak: 83.0
+12800 games: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 72.5, 67.0, 50.5, 42.5, 54.5, 50.5, 52.5, 58.0, 68.5, 71.5, 79.5, 84.0, 87.5, 84.0, 89.0, 85.0, 88.5, 90.0, 92.5, 89.5, 91.5, 89.5, 91.5, 88.0, 88.0, 95.0, 92.0] peak: 95.0
+epoch=12399-win_percentage=0.95.ckpt {'model_chooser': 898.5, 'big_money_provinces_only': 101.5}
+epoch=12799-win_percentage=0.92.ckpt {'model_chooser': 903.5, 'big_money_provinces_only': 96.5}
+
+**** entropy_loss_weight=exp(-3), lr=exp(-6)
+6400 games: [0.0, 0.0, 0.0, 66.5, 64.0, 66.5, 76.0, 66.5, 81.0, 80.5, 77.0, 78.5, 73.5, 76.5, 62.5, 68.0, 76.0] peak: 81.0
+selected action probabilities: [0.1448, 0.1510, 0.1201, 0.3159, 0.2601, 0.2580, 0.2265, 0.5880, 0.0730, 0.2537, 0.3055, 0.0719, 0.0998, 0.2744, 0.2661, 0.1386, 0.0810, 0.0886, 0.2916, 0.1436, 0.1498, 0.0325, 0.0603, 0.2110, 0.2080, 0.0840, 0.2744, 0.0773, 0.1036, 0.2537, 0.0889, 0.0786, 0.1957, 0.0572, 0.0579, 0.2599, 0.1096, 0.3070, 0.3775, 0.0977, 0.0541, 0.0880, 0.0541, 0.0847, 0.0532, 0.1178, 0.4005, 0.3544, 0.0482, 0.0860, 0.1196, 0.1950, 0.0255, 0.0431, 0.5719, 0.5929, 0.4212, 0.0841]
+
+12800 games: [0.0, 0.0, 0.0, 5.0, 44.0, 58.0, 68.5, 68.0, 32.5, 69.0, 19.0, 9.5, 25.5, 4.0, 9.5, 6.5, 4.0, 0.0, 5.5, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.5, 6.0, 4.5, 18.0, 5.0, 5.5, 11.0] peak: 69.0
+
+**** entropy_loss_weight=exp(-4), lr=exp(-6)
+6400 games: [0.0, 0.0, 3.0, 67.0, 68.0, 74.5, 74.0, 78.5, 84.0, 83.5, 84.5, 80.0, 88.5, 86.0, 82.5, 80.0, 86.5] peak: 88.5
+selected action probabilities: [0.9951, 0.3778, 0.1267, 0.9975, 0.3874, 0.7355, 0.9908, 0.9833, 0.3786, 0.9531, 0.9943, 0.7121, 0.4874, 0.6355, 0.9984, 0.1244, 0.9981, 0.9844, 0.9850, 0.9927]
+
+12800 games: [0.0, 0.0, 0.0, 1.0, 71.0, 65.5, 68.5, 68.5, 72.0, 69.0, 81.0, 84.0, 90.5, 87.0, 87.5, 79.5, 87.5, 87.0, 92.0, 82.0, 92.5, 88.0, 89.5, 93.0, 89.0, 88.5, 93.5, 98.0, 91.0, 95.5, 93.5, 91.5, 94.5] peak: 98.0
+epoch=10799-win_percentage=0.98.ckpt {'model_chooser': 901.5, 'big_money_provinces_only': 98.5}
+epoch\=12799-win_percentage\=0.945.ckpt {'model_chooser': 913.5, 'big_money_provinces_only': 86.5}
+
+**** entropy_loss_weight=exp(-5), lr=exp(-6)
+6400 games: [0.0, 0.0, 15.5, 66.5, 69.0, 71.0, 69.5, 71.0, 75.5, 75.0, 71.5, 68.0, 68.0, 70.0, 76.0, 84.5, 87.5] peak: 87.5
+selected action probabilities: [0.3894, 1.0000, 0.8767, 0.9756, 0.9615, 0.3350, 0.4482, 1.0000, 0.8900, 1.0000, 0.9994, 0.7144, 0.6296, 0.4757, 0.9999, 0.9998, 0.8023, 0.6169, 0.9957]
+
+12800 games: [0.0, 0.0, 16.0, 61.0, 51.0, 75.0, 73.5, 72.5, 82.0, 92.5, 83.0, 85.0, 87.5, 84.5, 85.0, 91.0, 94.5, 84.0, 93.0, 89.5, 88.0, 88.5, 88.5, 91.5, 93.0, 93.0, 93.5, 91.0, 92.5, 84.5, 93.0, 84.5, 90.5] peak: 94.5
+
+**** entropy_loss_weight=exp(-6), lr=exp(-6)
+6400 games: [0.0, 0.0, 12.5, 10.0, 15.5, 70.5, 74.5, 72.5, 72.0, 71.5, 90.5, 86.0, 88.5, 83.0, 93.0, 86.5, 88.0] peak: 93.0
+selected action probabilities: [0.8823, 0.9998, 0.9990, 0.9997, 1.0000, 0.9951, 0.9921, 0.9805, 0.9517, 1.0000, 1.0000, 0.4032, 0.4953, 0.9988]
+epoch=5599-win_percentage=0.93.ckpt {'model_chooser': 892.0, 'big_money_provinces_only': 108.0}
+epoch=6399-win_percentage=0.88.ckpt {'model_chooser': 900.5, 'big_money_provinces_only': 99.5}
+
+12800 games: [0.0, 0.0, 11.0, 76.0, 67.5, 54.5, 75.0, 79.0, 73.5, 78.0, 78.5, 84.0, 84.0, 83.5, 82.0, 87.5, 82.0, 93.0, 91.5, 91.0, 87.0, 82.5, 89.5, 81.0, 89.0, 85.5, 84.0, 91.0, 96.0, 86.0, 89.0, 88.5, 94.5] peak: 96.0
+
+**** entropy_loss_weight=exp(-7), lr=exp(-6)
+12800 games: [0.0, 0.0, 7.5, 26.5, 71.5, 72.0, 79.0, 76.5, 93.5, 78.0, 85.0, 85.5, 84.5, 87.5, 89.0, 83.5, 89.0, 82.5, 90.5, 84.5, 79.5, 92.0, 86.5, 86.0, 90.0, 81.5, 84.0, 82.5, 90.5, 88.0, 82.0, 85.5, 89.5] peak: 93.5
+
+**** entropy_loss_weight=exp(-8), lr=exp(-6)
+12800 games: [0.0, 0.0, 32.0, 70.0, 76.0, 65.0, 68.5, 73.0, 67.0, 72.5, 67.0, 66.0, 77.0, 73.5, 70.5, 70.0, 70.5, 68.5, 80.0, 81.5, 87.5, 86.0, 94.5, 80.5, 86.5, 80.5, 79.0, 84.0, 87.0, 86.5, 89.5, 85.0, 84.5] peak: 94.5
 
 *** 1 hidden layer with 16 nodes, epsilon=0.0, temperature=exp(5), loss NOT multiplied by temperature, Adam(0.9, 0.999)
 **** entropy_loss_weight=0, multiply temperature by 2 whenever max probability is above 0.9
@@ -215,10 +307,12 @@ chosen action probabilities in last training game (nine 1.0s): 0.6043, 1.0000, 0
 6400 games: [0.0, 0.0, 63.0, 72.0, 71.0, 68.0, 68.5, 71.0, 68.0, 62.5, 67.0, 63.5, 70.5, 68.0, 68.5, 73.5, 56.5, 53.0, 49.0, 51.5, 46.0, 48.5, 62.5, 60.5, 70.5, 80.0, 73.0, 75.5, 83.0, 74.0, 76.0, 71.5, 89.0] peak: 89.0
 
 *** various models, entropy_loss_weight=0, epsilon=0.0 softmax temperature: exp(5)
-**** 1 hidden layer with 16 nodes
-6400 games: [0.0, 28.5, 37.5, 38.5, 40.0, 35.0, 41.0, 34.5, 34.5, 44.5, 38.5, 36.5, 30.5, 37.5, 34.5, 39.5, 47.5, 46.5, 45.0, 43.0, 43.0, 45.0, 42.0, 49.0, 47.5, 44.5, 47.0, 45.0, 43.0, 41.0, 42.5, 44.5, 45.0] peak: 49.0
-6400 games: [0.0, 11.5, 16.5, 20.5, 16.5, 21.0, 20.5, 25.0, 25.5, 18.5, 23.5, 9.5, 31.0, 37.0, 34.0, 29.0, 29.0, 35.5, 43.5, 44.0, 43.0, 42.5, 43.0, 40.0, 43.0, 45.0, 43.0, 38.5, 42.0, 48.0, 43.0, 44.5, 44.0] peak: 48.0 -> {'model_chooser': 859.0, 'big_money_provinces_only': 141.0}
+OneCycleLR(policy_model_optimizer, max_lr=math.exp(-4), total_steps=MAX_EPOCHS, pct_start=0.3, anneal_strategy='cos', cycle_momentum=False, base_momentum=0.9, max_momentum=0.9, div_factor=1, final_div_factor=math.exp(1))
 
+**** 1 hidden layer with 16 nodes
+6400 games: [0.0, 28.5, 37.5, 38.5, 40.0, 35.0, 41.0, 34.5, 34.5, 44.5, 38.5, 36.5, 30.5, 37.5, 34.5, 39.5, 47.5, 46.5, 45.0, 43.0, 43.0, 45.0, 42.0, 49.0, 47.5, 44.5, 47.0, 45.0, 43.0, 41.0, 42.5, 44.5, 45.0] peak: 49.0 (out of 50)
+6400 games: [0.0, 11.5, 16.5, 20.5, 16.5, 21.0, 20.5, 25.0, 25.5, 18.5, 23.5, 9.5, 31.0, 37.0, 34.0, 29.0, 29.0, 35.5, 43.5, 44.0, 43.0, 42.5, 43.0, 40.0, 43.0, 45.0, 43.0, 38.5, 42.0, 48.0, 43.0, 44.5, 44.0] peak: 48.0 -> {'model_chooser': 859.0, 'big_money_provinces_only': 141.0}
+3200 games: [0.0, 69.5, 68.0, 77.0, 77.5, 78.0, 93.5, 84.5, 85.5] peak: 93.5
 **** 1 hidden layer with 32 nodes
 6400 games: [0.0, 15.5, 32.5, 36.5, 31.0, 39.5, 36.5, 42.5, 41.0, 41.5, 41.0, 36.0, 36.5, 38.5, 39.0, 39.0, 38.5, 37.5, 39.0, 34.0, 38.5, 38.5, 34.0, 40.0, 40.0, 37.0, 43.0, 34.0, 40.5, 40.0, 35.0, 37.5, 33.0] peak: 43.0
 

@@ -3,7 +3,12 @@ import strategies
 import play
 from models.reinforce import get_policy_model
 
+from actions import action_id_to_action
+
+import math
 import sys
+import os
+
 import torch
 
 policy_model_path = sys.argv[1]
@@ -28,9 +33,10 @@ for i in range(10):
         player_names=["model_chooser", "big_money_provinces_only"],
         choosers=choosers,
         n=1)
-    for state_action_pair in choosers[0].state_action_pairs:
-        selected_choice = state_action_pair.possible_actions[state_action_pair.selected_action]
-        print(selected_choice.action.get_description())
+    for action_id in game_df["player_0_selected_action_id"]:
+        if not math.isnan(action_id):
+            action = action_id_to_action(int(action_id))
+            print(action.get_description())
 
 
 games_df, win_rates = play.play_n_games(
@@ -40,4 +46,4 @@ games_df, win_rates = play.play_n_games(
     n=1000)
 
 
-print(win_rates)
+print(os.path.basename(policy_model_path), win_rates)

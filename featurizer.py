@@ -1,6 +1,6 @@
 from typing import Any
 
-from actions import Action
+from actions import Action, action_to_action_id
 from cards import *
 
 import numpy as np
@@ -35,6 +35,7 @@ def game_history_to_df(state_action_pairs: List[StateActionPair],
     cumulative_action_reward = 0.0
     for sap, d in reversed(list(zip(state_action_pairs, game_state_dicts))):
         selected_action = sap.possible_actions[sap.selected_action].action
+        d[f"player_{player_index}_selected_action_id"] = action_to_action_id(selected_action)
         cumulative_action_reward += action_to_reward.get(selected_action, 0.0)
         # Using gamma=1 for now.
         d["reward"] = game_outcome_reward + cumulative_action_reward
