@@ -1,5 +1,7 @@
 import random
 
+from functools import reduce
+
 from multiset import Multiset
 from typing import NamedTuple, Tuple, List, Dict, Set, Optional, Sequence
 
@@ -273,23 +275,39 @@ def vp_total(card_counts: CardCounts) -> int:
 
     return total
 
-def get_all_player_cards(player: Player) -> CardCounts:
-    all_cards = player.hand + player.deck + player.played_actions + player.discard_pile
+def get_card_counts_for_top_of_deck(player: Player) -> CardCounts:
+    result = empty_card_counts()
     for card in player.top_of_deck:
-        all_cards = add_card(all_cards, card)
-    return all_cards
+        result = add_card(result, card)
+    return result
+
+def list_of_owned_card_counts_for_player(player: Player) -> List[CardCounts]:
+    """Performance optimization for uses cases that don't need all the cards merged into one CardCounts object."""
+    return [player.hand,
+            player.deck,
+            player.played_actions,
+            player.discard_pile,
+            get_card_counts_for_top_of_deck(player)]
+
+def get_all_player_cards(player: Player) -> CardCounts:
+    return reduce(add_card_counts, list_of_owned_card_counts_for_player(player))
 
 def get_total_player_vp(player: Player) -> int:
-    return vp_total(get_all_player_cards(player))
+    # This approach is faster than vp_total(get_all_player_cards(player))
+    return sum(vp_total(card_counts) for card_counts
+               in list_of_owned_card_counts_for_player(player))
 
-def get_total_owned_treasure_value(player: Player) -> float:
-    all_player_cards = get_all_player_cards(player)
-    return money_from_treasures(all_player_cards)
+def get_total_owned_treasure_value(player: Player) -> int:
+    return sum(money_from_treasures(card_counts) for card_counts
+               in list_of_owned_card_counts_for_player(player))
+
+def get_num_owned_cards(player: Player) -> int:
+    return sum(num_cards(card_counts) for card_counts
+               in list_of_owned_card_counts_for_player(player))
 
 def get_average_treasure_value_per_card(player: Player) -> float:
-    all_player_cards = get_all_player_cards(player)
-    player_treasure_total = money_from_treasures(all_player_cards)
-    player_card_total = num_cards(all_player_cards)
+    player_treasure_total = get_total_owned_treasure_value(player)
+    player_card_total = get_num_owned_cards(player)
     return player_treasure_total / player_card_total
 
 def non_current_player_indices(game_state: GameState):
