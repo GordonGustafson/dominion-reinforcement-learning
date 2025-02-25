@@ -230,6 +230,8 @@ def get_policy_model():
             torch.nn.Sequential(
                 torch.nn.Linear(NUM_INPUT_FEATURES, hidden_layer_width, bias=True),
                 torch.nn.ReLU(),
+                torch.nn.Linear(hidden_layer_width, hidden_layer_width, bias=False),
+                torch.nn.ReLU(),
                 torch.nn.Linear(hidden_layer_width, num_model_outputs, bias=False),
             ),
         ])
