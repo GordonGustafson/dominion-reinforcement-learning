@@ -165,7 +165,7 @@ class PlayAllTreasures:
 _ACTION_TYPES_WITH_ANY_CARD_PARAMETER = [
     GainMostExpensiveCardAvailable,
     GainCardInsteadOfMoreExpensiveCard,
-#    GainCardToHand,
+    GainCardToHand,
 #    DiscardCard,
 #    DiscardCardToDrawACard,
 #    DontDiscardCardToDrawACard,
@@ -180,7 +180,7 @@ _ACTION_TYPES_WITH_ACTION_CARD_PARAMETER = [
 ]
 
 _ACTION_TYPES_WITH_TREASURE_CARD_PARAMETER = [
-#    TrashTreasureCardFromHandToGainTreasureCardToHandCostingUpTo3More,
+    TrashTreasureCardFromHandToGainTreasureCardToHandCostingUpTo3More,
 ]
 
 _ACTION_TYPES_WITHOUT_CARD_PARAMETER = [
@@ -189,7 +189,7 @@ _ACTION_TYPES_WITHOUT_CARD_PARAMETER = [
     PlayNoActionCard,
 #    PutNoCardFromDiscardPileOntoDeck,
     TrashNoCardFromHand,
-#    TrashNoTreasureCardFromHandToGainTreasureCardToHandCostingUpTo3More,
+    TrashNoTreasureCardFromHandToGainTreasureCardToHandCostingUpTo3More,
 #    TrashACopperFor3Money,
 #    DontTrashACopperFor3Money,
 #    PlayAllTreasures,

@@ -1,8 +1,9 @@
 from collections.abc import Callable
 
 from actions import Action, action_to_action_id, GainNothingOnFirstBuy, GainMostExpensiveCardAvailable, PlayActionCard, \
-    PlayNoActionCard, TrashCardFromHand, TrashNoCardFromHand, \
-    GainCardInsteadOfMoreExpensiveCard, GainNothingOnSecondOrLaterBuy
+    PlayNoActionCard, TrashCardFromHand, TrashNoCardFromHand, TrashNoTreasureCardFromHandToGainTreasureCardToHandCostingUpTo3More, \
+    TrashTreasureCardFromHandToGainTreasureCardToHandCostingUpTo3More, GainCardInsteadOfMoreExpensiveCard, GainNothingOnSecondOrLaterBuy, \
+    GainCardToHand
 from chooser import Chooser
 from game import Choice
 from pytorch.dataloader import tensorify_inputs
@@ -140,16 +141,16 @@ def action_to_score(action: Action, game_state: GameState, player_index: int):
 
     num_cards_to_trash = num_curses_in_hand + num_copper_to_trash + num_estates_to_trash
 
-    if num_cards_to_trash >= 3 or num_curses_in_hand >= 2:
-        play_chapel_score = 11
+    if num_cards_to_trash >= 3 or num_curses_in_hand >= 2 or num_estates_to_trash >= 2:
+        play_chapel_score = 95
     elif num_cards_to_trash == 2:
-        play_chapel_score = 8
+        play_chapel_score = 80
     elif num_curses_in_hand == 1:
-        play_chapel_score = 3
+        play_chapel_score = 30
     elif num_cards_to_trash == 1:
-        play_chapel_score = 1
+        play_chapel_score = 10
     elif num_cards_to_trash == 0:
-        play_chapel_score = -1
+        play_chapel_score = -20
     else:
         raise ValueError("This statement should be unreachable")
 
@@ -159,10 +160,11 @@ def action_to_score(action: Action, game_state: GameState, player_index: int):
         case PlayActionCard(card):
             action_card_to_score = {
                 card_name_to_card("chapel"): play_chapel_score,
-                card_name_to_card("workshop"): 3,
-                card_name_to_card("smithy"): 4,
-                card_name_to_card("council room"): 5,
-                card_name_to_card("witch"): 9 if game_state.supply[card_name_to_card("curse")] > 0 else 2,
+                card_name_to_card("workshop"): 30,
+                card_name_to_card("smithy"): 40,
+                card_name_to_card("council room"): 50,
+                card_name_to_card("mine"): 85 if provinces_remaining > 4 else 15,
+                card_name_to_card("witch"): 90 if game_state.supply[card_name_to_card("curse")] > 0 else 20,
                 card_name_to_card("market"): 100,
                 card_name_to_card("laboratory"): 100,
                 card_name_to_card("festival"): 200,
@@ -180,6 +182,27 @@ def action_to_score(action: Action, game_state: GameState, player_index: int):
                 card_name_to_card("copper"): 4 if worth_trashing_copper else -1,
             }
             return trashed_card_to_score.get(card, -1)
+
+        # Mine
+        case TrashNoTreasureCardFromHandToGainTreasureCardToHandCostingUpTo3More():
+            return 0
+        case TrashTreasureCardFromHandToGainTreasureCardToHandCostingUpTo3More(card):
+            # tough call to make an trashing silver vs. gold: https://boardgames.stackexchange.com/questions/3397
+            trashed_card_to_score = {
+                card_name_to_card("copper"): 5,
+                card_name_to_card("silver"): 10,
+                card_name_to_card("gold"): -10,
+            }
+            return trashed_card_to_score[card]
+        case GainNothingOnFirstBuy():
+            return -10
+        case GainCardToHand(card):
+            gained_card_to_score = {
+                card_name_to_card("copper"): -20,
+                card_name_to_card("silver"): 10,
+                card_name_to_card("gold"): 20,
+            }
+            return gained_card_to_score[card]
 
 def play_plus_actions_first(chooser: Chooser, game_state: GameState, choices: List[Choice], player_index: int):
     possible_actions = [choice.action for choice in choices]

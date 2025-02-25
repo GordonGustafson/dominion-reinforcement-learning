@@ -164,7 +164,7 @@ CARD_LIST = [
 #    # gaining cards
      make_card(name="workshop", cost=3, action_effects=(Effect(EffectName.GAIN_A_CARD_COSTING_UP_TO, 4),)),
 #    make_card(name="remodel", cost=4, action_effects=(Effect(EffectName.TRASH_GAIN_A_CARD_COSTING_UP_TO_X_MORE, 2),)),
-#    make_card(name="mine", cost=5, action_effects=(Effect(EffectName.MAY_TRASH_TREASURE_GAIN_TREASURE_TO_HAND_COSTING_UP_TO_X_MORE, 3),)),
+     make_card(name="mine", cost=5, action_effects=(Effect(EffectName.MAY_TRASH_TREASURE_GAIN_TREASURE_TO_HAND_COSTING_UP_TO_X_MORE, 3),)),
 #
 #    # simple draw/discard effects
 #    make_card(name="cellar", cost=2, action_effects=(Effect(EffectName.PLUS_ACTIONS, 1),
@@ -541,7 +541,7 @@ def initial_supply(num_players: int) -> Dict[str, int]:
     card_dict["chapel"] = 10
     card_dict["workshop"] = 10
     # card_dict["remodel"] = 10
-    # card_dict["mine"] = 10
+    card_dict["mine"] = 10
     # card_dict["cellar"] = 10
     # card_dict["harbinger"] = 10
     # card_dict["moneylender"] = 10

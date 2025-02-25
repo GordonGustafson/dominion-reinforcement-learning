@@ -5,7 +5,7 @@ from cards import card_name_to_card, CARD_LIST
 
 import torch
 
-NUM_INPUT_FEATURES = 23
+NUM_INPUT_FEATURES = 24
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
