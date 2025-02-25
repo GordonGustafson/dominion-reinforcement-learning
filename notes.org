@@ -1,3 +1,16 @@
+* scratchcode
+    if num_curses_in_hand >= 2:
+        play_chapel_score = 11
+    elif num_curses_in_hand == 1 and can_trash_two_or_more_copper:
+        play_chapel_score = 11
+    elif num_curses_in_hand == 1 and can_trash_one_or_more_copper:
+        # Prefer playing a Witch to curse another player and draw 2 cards to trashing 1 curse and 1 copper.
+        play_chapel_score = 8
+    elif num_curses_in_hand == 1 and not can_trash_one_or_more_copper:
+        play_chapel_score = 8
+    elif num_curses_in_hand == 0 and can_trash_two_or_more_copper:
+        play_chapel_score = 8
+
 * random forest from scratch
 * models
 parametric models - assume a priori the distribution of each parameter
@@ -60,7 +73,29 @@ OneCycleLR(policy_model_optimizer, max_lr=math.exp(-4), total_steps=MAX_EPOCHS, 
 1600 games: {'model_chooser': 0, 'big_money_provinces_only': 50.0}
 
 
-** 16 features, smithy, village, laboratory, festival, market, 1600 games, model chooses only gain actions, separate actions for gaining a card instead of a more expensive card AND for gaining nothing on the second buy
+** 22 features, smithy, village, laboratory, festival, market, witch, workshop, council room, model chooses only gain actions, separate actions for gaining a card instead of a more expensive card AND for gaining nothing on the second buy
+    exclude_num_card_owned = {card_name_to_card(card_name) for card_name in ["estate", "duchy", "province", "curse"]}
+    num_card_owned_feature_names = [f"num_{card.name}_owned_self" for card in sorted(set(CARD_LIST) - exclude_num_card_owned)]
+    feature_names = [
+        "max_turns_per_player",
+        "num_provinces_remaining",
+        "two_provinces_remaining",
+        "one_province_remaining",
+        "player_vp_lead",
+        "num_vp_self",
+        "average_treasure_value_self",
+        "num_victory_cards_owned_self",
+        "num_actions_owned_with_plus_zero_actions_self",
+        "num_actions_owned_with_plus_one_action_self",
+        "num_actions_owned_with_plus_two_actions_self",
+    ] + num_card_owned_feature_names
+12800 games: [0.0, 0.0, 72.0, 34.0, 92.5, 94.0, 92.5, 91.5, 92.0, 91.5, 87.0, 94.0, 98.0, 95.0, 96.0, 97.0, 99.0, 98.0, 98.5, 96.5, 90.0, 93.0, 95.5, 95.5, 95.5, 96.5, 93.5, 95.0, 98.5, 97.0, 99.0, 96.0, 97.0] peak: 99.0
+epoch=12799-win_percentage=0.97.ckpt {'model_chooser': 966.0, 'big_money_provinces_only': 34.0}
+
+6400 epochs, 2 games per epoch, lr=exp(-5.5): [0.0, 0.0, 0.0, 35.0, 46.0, 27.0, 34.0, 46.0, 33.0, 94.0, 0.0, 0.0, 0.0, 1.0, 0.0, 12.0, 10.0, 13.0, 41.5, 42.0, 53.5, 32.5, 4.0, 1.0, 9.0, 11.0, 25.0, 1.0, 1.0, 3.0, 25.0, 20.0, 36.0] peak: 94.0
+
+
+** 16 features, smithy, village, laboratory, festival, market, 1600 games (if not specified), model chooses only gain actions, separate actions for gaining a card instead of a more expensive card AND for gaining nothing on the second buy
 16 features are
         "player_vp_lead",
         "num_provinces_remaining",

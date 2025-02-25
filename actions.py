@@ -170,7 +170,7 @@ _ACTION_TYPES_WITH_ANY_CARD_PARAMETER = [
 #    DiscardCardToDrawACard,
 #    DontDiscardCardToDrawACard,
 #    PutCardFromDiscardPileOntoDeck,
-#    TrashCardFromHand,
+     TrashCardFromHand,
 #    TrashRevealedCard,
 #    TrashCardFromHandToGainCardCostingUpTo2More,
 ]
@@ -188,7 +188,7 @@ _ACTION_TYPES_WITHOUT_CARD_PARAMETER = [
     GainNothingOnSecondOrLaterBuy,
     PlayNoActionCard,
 #    PutNoCardFromDiscardPileOntoDeck,
-#    TrashNoCardFromHand,
+    TrashNoCardFromHand,
 #    TrashNoTreasureCardFromHandToGainTreasureCardToHandCostingUpTo3More,
 #    TrashACopperFor3Money,
 #    DontTrashACopperFor3Money,

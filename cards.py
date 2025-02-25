@@ -154,11 +154,11 @@ CARD_LIST = [
                                                       Effect(EffectName.DRAW_CARDS, 1))),
  
 #    # trashing cards
-#    make_card(name="chapel", cost=2, action_effects=(Effect(EffectName.MAY_TRASH_A_CARD_FROM_YOUR_HAND, None),
-#                                                     Effect(EffectName.MAY_TRASH_A_CARD_FROM_YOUR_HAND, None),
-#                                                     Effect(EffectName.MAY_TRASH_A_CARD_FROM_YOUR_HAND, None),
-#                                                     Effect(EffectName.MAY_TRASH_A_CARD_FROM_YOUR_HAND, None))),
-#
+     make_card(name="chapel", cost=2, action_effects=(Effect(EffectName.MAY_TRASH_A_CARD_FROM_YOUR_HAND, None),
+                                                      Effect(EffectName.MAY_TRASH_A_CARD_FROM_YOUR_HAND, None),
+                                                      Effect(EffectName.MAY_TRASH_A_CARD_FROM_YOUR_HAND, None),
+                                                      Effect(EffectName.MAY_TRASH_A_CARD_FROM_YOUR_HAND, None))),
+
 #    # gaining cards
      make_card(name="workshop", cost=3, action_effects=(Effect(EffectName.GAIN_A_CARD_COSTING_UP_TO, 4),)),
 #    make_card(name="remodel", cost=4, action_effects=(Effect(EffectName.TRASH_GAIN_A_CARD_COSTING_UP_TO_X_MORE, 2),)),
@@ -281,6 +281,10 @@ def get_all_player_cards(player: Player) -> CardCounts:
 
 def get_total_player_vp(player: Player) -> int:
     return vp_total(get_all_player_cards(player))
+
+def get_total_owned_treasure_value(player: Player) -> float:
+    all_player_cards = get_all_player_cards(player)
+    return money_from_treasures(all_player_cards)
 
 def get_average_treasure_value_per_card(player: Player) -> float:
     all_player_cards = get_all_player_cards(player)
@@ -516,7 +520,7 @@ def initial_supply(num_players: int) -> Dict[str, int]:
     card_dict["laboratory"] = 10
     card_dict["festival"] = 10
     card_dict["market"] = 10
-    # card_dict["chapel"] = 10
+    card_dict["chapel"] = 10
     card_dict["workshop"] = 10
     # card_dict["remodel"] = 10
     # card_dict["mine"] = 10
