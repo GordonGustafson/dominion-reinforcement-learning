@@ -59,8 +59,8 @@ def game_state_to_dict(game_state: GameState, player_index: int) -> dict[str, An
                              }
 
     player_dict = player_to_dict(game_state.players[player_index], suffix="_self")
-    opponent_dict = player_to_dict(game_state.players[opponent_index], suffix="_opponent")
-    return {**non_player_state_dict, **player_dict, **opponent_dict}
+    # opponent_dict = player_to_dict(game_state.players[opponent_index], suffix="_opponent")
+    return {**non_player_state_dict, **player_dict}
 
 def game_state_to_df(game_state: GameState, player_index: int) -> pd.DataFrame:
     return pd.DataFrame([game_state_to_dict(game_state, player_index)], dtype=np.float32)
@@ -85,8 +85,8 @@ def player_to_dict(player: Player, suffix: str) -> dict:
 
     for card in CARD_LIST:
         result[f"num_{card.name}_owned" + suffix] = all_player_cards[card]
-        result[f"zero_{card.name}_owned" + suffix] = all_player_cards[card] == 0
-        result[f"one_{card.name}_owned" + suffix] = all_player_cards[card] == 1
-        result[f"two_{card.name}_owned" + suffix] = all_player_cards[card] == 2
+        # result[f"zero_{card.name}_owned" + suffix] = all_player_cards[card] == 0
+        # result[f"one_{card.name}_owned" + suffix] = all_player_cards[card] == 1
+        # result[f"two_{card.name}_owned" + suffix] = all_player_cards[card] == 2
 
     return result
